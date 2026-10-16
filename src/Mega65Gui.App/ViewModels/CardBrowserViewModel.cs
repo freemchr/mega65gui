@@ -158,7 +158,20 @@ public sealed partial class CardBrowserViewModel : PageViewModel
         return errors.Count == 0 ? null : "The MEGA65 reported: " + string.Join("; ", errors);
     }
 
-    [RelayCommand] private Task OpenCardAsync() => CardAsync("Reading the card…", async s => { await ListRemoteAsync(s); return null; });
+    /// <summary>Warns before the helper overwrites memory; asked each time the card is opened.</summary>
+    public static bool ConfirmMemoryUse() => MessageBox.Show(Application.Current.MainWindow,
+        "Opening the card loads a small helper program into the MEGA65's memory.\n\n" +
+        "• Anything in memory now, such as a BASIC program you have not saved, will be LOST.\n" +
+        "• The MEGA65 RESETS when the card connection closes: when you leave this page, after 90 seconds without use, " +
+        "or when you use another Device or Update action.\n\nSave any work on the MEGA65 first. Open the card now?",
+        "Open the MEGA65's SD card", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
+
+    [RelayCommand]
+    private Task OpenCardAsync()
+    {
+        if (!services.HasFtpSession && !ConfirmMemoryUse()) return Task.CompletedTask;
+        return CardAsync("Reading the card…", async s => { await ListRemoteAsync(s); return null; });
+    }
     [RelayCommand] private Task RemoteRefreshAsync() => OpenCardAsync();
 
     [RelayCommand]

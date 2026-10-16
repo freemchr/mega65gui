@@ -68,6 +68,7 @@ public sealed class AppServices
         try
         {
             if (_ftp is { IsOpen: true }) return _ftp;
+            ReleasePortRequested?.Invoke();
             var target = Connection ?? throw new InvalidOperationException("Connect to the MEGA65 first.");
             var commands = Commands ?? throw new InvalidOperationException("Install the device tools first.");
             _ftp = await commands.OpenFtpSessionAsync(target, ct);
@@ -75,6 +76,16 @@ public sealed class AppServices
             return _ftp;
         }
         finally { _ftpLock.Release(); }
+    }
+
+    /// <summary>Raised when something needs the serial port; the terminal closes its connection.</summary>
+    public event Action? ReleasePortRequested;
+
+    /// <summary>Frees the serial port: closes the terminal and the card browser session.</summary>
+    public async Task ReleasePortAsync()
+    {
+        ReleasePortRequested?.Invoke();
+        await CloseFtpSessionAsync();
     }
 
     /// <summary>Ends the browser session (the MEGA65 resets as the helper unloads).</summary>
@@ -95,7 +106,7 @@ public sealed class AppServices
     /// <summary>Connects over USB/JTAG and reads model, core and ROM (read-only monitor commands).</summary>
     public async Task<DeviceState> ConnectSerialAsync(string port, CancellationToken ct = default)
     {
-        await CloseFtpSessionAsync();
+        await ReleasePortAsync();
         var target = ConnectionTarget.Serial(port);
         var state = await Task.Run(() => new DeviceProbe().ProbeAsync(target, ct), ct);
         SetConnection(target, state);

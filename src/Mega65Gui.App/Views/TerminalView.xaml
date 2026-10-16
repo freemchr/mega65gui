@@ -1,0 +1,45 @@
+<UserControl x:Class="Mega65Gui.App.Views.TerminalView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top">
+            <TextBlock Text="Terminal and remote keyboard" Style="{StaticResource PageTitle}"/>
+            <TextBlock Style="{StaticResource PageSubtitle}"
+                       Text="Talk to the MEGA65's serial monitor over USB/JTAG, or type on the MEGA65 from this PC's keyboard. The monitor can change memory; use it with care."/>
+        </StackPanel>
+        <ContentControl DockPanel.Dock="Bottom" Content="{Binding}" ContentTemplate="{StaticResource StatusFooter}"/>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button Content="Open" Style="{DynamicResource AccentButtonStyle}" Command="{Binding OpenCommand}" Margin="0,0,6,0"
+                    Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}"/>
+            <Button Content="Close" Command="{Binding DisconnectCommand}" Margin="0,0,6,0" Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisible}}"/>
+            <Button Content="Clear" Command="{Binding ClearCommand}" Margin="0,0,18,0"/>
+            <ToggleButton x:Name="KeyboardToggle" IsChecked="{Binding KeyboardActive}" IsEnabled="{Binding IsOpen}" Checked="KeyboardOn"
+                          ToolTip="While on, keys typed in the box below are pressed on the MEGA65">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE765;" Style="{StaticResource Icon}" Margin="0,0,6,0"/>
+                    <TextBlock Text="Remote keyboard"/>
+                </StackPanel>
+            </ToggleButton>
+        </StackPanel>
+        <!-- Remote keyboard capture -->
+        <Border x:Name="KeyCapture" DockPanel.Dock="Top" Margin="0,0,0,8" Padding="12,8" CornerRadius="6" Focusable="True"
+                BorderThickness="2" BorderBrush="{DynamicResource AccentFillColorDefaultBrush}" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                Visibility="{Binding KeyboardActive, Converter={StaticResource BoolToVisible}}"
+                PreviewKeyDown="CaptureKeyDown" TextInput="CaptureTextInput" MouseDown="CaptureClick">
+            <TextBlock TextWrapping="Wrap">
+                <Run FontWeight="SemiBold" Text="Typing goes to the MEGA65."/>
+                <Run Text="Click here to focus. Enter = RETURN, Backspace = INST/DEL, arrows, Home (Shift+Home = CLR), Esc = RUN/STOP, F1–F8."/>
+            </TextBlock>
+        </Border>
+        <Grid DockPanel.Dock="Bottom" Margin="0,8,0,0" IsEnabled="{Binding IsOpen}">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBox Text="{Binding Command, UpdateSourceTrigger=PropertyChanged}" FontFamily="Cascadia Mono, Consolas" KeyDown="CommandKeyDown"
+                     ToolTip="Monitor command, e.g. h (help), r (registers), m 2001 (memory)"/>
+            <Button Grid.Column="1" Content="Send" Command="{Binding SendCommand}" Margin="6,0,0,0"/>
+        </Grid>
+        <Border CornerRadius="6" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+            <TextBox x:Name="Output" Text="{Binding Transcript, Mode=OneWay}" IsReadOnly="True" FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                     BorderThickness="0" Background="Transparent" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Padding="8"/>
+        </Border>
+    </DockPanel>
+</UserControl>

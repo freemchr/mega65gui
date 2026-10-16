@@ -12,10 +12,11 @@ public sealed partial class MainViewModel : ObservableObject
         Device = new DeviceViewModel(services);
         CardBrowser = new CardBrowserViewModel(services);
         DiskRomTools = new ToolsPageViewModel(services);
+        Terminal = new TerminalViewModel(services);
         SdSync = new SdSyncViewModel(services);
         Tools = new ToolsViewModel(services);
         Features = new FeaturesViewModel();
-        Pages = [Update, Catalogue, Device, CardBrowser, SdSync, DiskRomTools, Tools, Features];
+        Pages = [Update, Catalogue, Device, CardBrowser, Terminal, SdSync, DiskRomTools, Tools, Features];
         Shell = new ShellStatusViewModel(services)
         {
             Navigate = title => Selected = Pages.First(p => p.Title == title),
@@ -30,6 +31,7 @@ public sealed partial class MainViewModel : ObservableObject
     public DeviceViewModel Device { get; }
     public CardBrowserViewModel CardBrowser { get; }
     public ToolsPageViewModel DiskRomTools { get; }
+    public TerminalViewModel Terminal { get; }
     public SdSyncViewModel SdSync { get; }
     public ToolsViewModel Tools { get; }
     public FeaturesViewModel Features { get; }
@@ -41,6 +43,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         // Leaving the card browser releases the serial port for everything else.
         if (_selected == CardBrowser && value != CardBrowser) _ = CardBrowser.OnHiddenAsync();
+        if (_selected == Terminal && value != Terminal) _ = Terminal.OnHiddenAsync();
     }
 
     partial void OnSelectedChanged(PageViewModel value)

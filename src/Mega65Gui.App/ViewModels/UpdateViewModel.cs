@@ -167,7 +167,7 @@ public sealed partial class UpdateViewModel : PageViewModel
             Status = "Sign in to the Filehost to include the closed ROM, or untick that option.";
             return;
         }
-        await services.CloseFtpSessionAsync();
+        await services.ReleasePortAsync();
         foreach (var s in Steps) { s.Status = StepStatus.Pending; s.Detail = ""; }
         Log.Clear();
         ReportPath = null;

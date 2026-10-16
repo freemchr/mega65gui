@@ -150,6 +150,9 @@ public sealed class UpdateEngine(
                 _ => "The installed core could not be read, so the SD card will be compared file by file.",
             })
             .AppendLine()
+            .AppendLine(o.CardInDevice
+                ? "The card inside the MEGA65 is read with a helper program loaded into the MEGA65's memory: anything unsaved in memory will be lost, and the MEGA65 resets after each card operation. Save any work on the MEGA65 first."
+                : "")
             .AppendLine("Next: download the package and compare it with your SD card. Nothing is written yet.")
             .ToString();
         Set(4, StepStatus.Done, summary);
