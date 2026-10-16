@@ -678,7 +678,7 @@
                         <TextBlock Text="MEGA65 project" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" TextDecorations="Underline"/>
                     </Button>
                         <TextBlock TextWrapping="Wrap" Margin="0,8,0,0" Style="{StaticResource Muted}"
-                                   Text="Also uses SharpCompress, CommunityToolkit.Mvvm and .NET (MIT licence). MEGA65 GUI is an independent project and is not an official MEGA65 product."/>
+                                   Text="Also uses SharpCompress, CommunityToolkit.Mvvm and .NET (MIT licence). MEGA65 GUI is free software under the GNU GPL v3, an independent project and not an official MEGA65 product."/>
                     </StackPanel>
                 </Border>
             </StackPanel>

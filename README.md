@@ -89,3 +89,7 @@ dotnet run --project src/Mega65Gui.App
 - **Libraries:** SharpCompress, CommunityToolkit.Mvvm and .NET (MIT).
 
 MEGA65 GUI is an independent project and is not an official MEGA65 product.
+
+## Licence
+
+MEGA65 GUI is free software under the [GNU General Public License v3.0](LICENSE). Copyright © 2026 Chris Freeman.

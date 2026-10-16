@@ -26,4 +26,4 @@ Not legal advice. This is a summary of the licence position as researched on 202
    - FTDI `ftd2xx.dll` (proprietary);
    - closed MEGA65/Commodore ROMs;
    - Vivado.
-5. **Choosing a licence for MEGA65 GUI is still open** (the repository currently has none). GPL-3.0 would be the simplest choice if code reuse from either project is ever wanted later.
+5. **MEGA65 GUI is licensed under the GNU GPL v3** (see `LICENSE`), the same licence as the official MEGA65 tools and M65Connect.
