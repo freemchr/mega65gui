@@ -10,7 +10,16 @@ It brings together:
 - a guided **Update My MEGA65** workflow;
 - the working goal of feature parity with [M65Connect](https://github.com/MEGA65/m65connect).
 
-> Status: **0.1 in development.** The Filehost, download, SD-sync and update logic is implemented and tested, including a live end-to-end run against the Filehost. Device features are built on documented tool flags but are **not yet verified on hardware**. The app's Features page shows each feature's status.
+> Status: **in development.** Tested on a real MEGA65 R6 over USB/JTAG: updates (including the closed ROM via your Filehost account), the SD card browser, PRG/SID/ROM/HICKUP loading, PAL/NTSC, screenshots, the terminal and remote keyboard. Ethernet and bitstream loading are not yet verified on hardware. The app's Features page shows each feature's status.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Update My MEGA65](docs/screenshots/update.png) | ![Filehost](docs/screenshots/filehost.png) |
+| **Update My MEGA65:** the 12-step guided update | **Filehost:** browse, search and download |
+| ![Device](docs/screenshots/device.png) | ![Features](docs/screenshots/features.png) |
+| **Device:** connect, control and load files | **Features:** what is implemented and verified |
 
 ## What it does
 
