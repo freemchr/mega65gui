@@ -70,6 +70,7 @@ dotnet run --project src/Mega65Gui.App
 
 - **Report a problem or request a feature:** [GitHub Issues](https://github.com/freemchr/mega65gui/issues).
 - **Source and documentation:** https://github.com/freemchr/mega65gui
+- **Support the project:** if MEGA65 GUI helps you, you can [buy me a coffee](https://buymeacoffee.com/cjf077).
 
 ## Credits
 

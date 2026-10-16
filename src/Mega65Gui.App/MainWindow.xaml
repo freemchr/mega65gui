@@ -19,8 +19,8 @@
                         <Rectangle Canvas.Left="22" Width="4" Height="20" Fill="{StaticResource M65Blue}"/>
                     </Canvas>
                     <StackPanel>
-                        <TextBlock Text="MEGA65" FontSize="17" FontWeight="Bold" LineHeight="18"/>
-                        <TextBlock Text="Manager" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="MEGA65 GUI" FontSize="17" FontWeight="Bold" LineHeight="18"/>
+                        <TextBlock Text="MEGA65 Manager" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
                 </StackPanel>
 

@@ -609,6 +609,11 @@
                         <Button Style="{StaticResource FlatRow}" Command="{Binding OpenCommand}" CommandParameter="https://github.com/freemchr/mega65gui" HorizontalAlignment="Left" Padding="0">
                         <TextBlock Text="Source code and documentation: github.com/freemchr/mega65gui" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" TextDecorations="Underline"/>
                     </Button>
+                        <TextBlock Text="Support the project" Style="{StaticResource SectionTitle}" Margin="0,12,0,4"/>
+                        <TextBlock TextWrapping="Wrap" Margin="0,0,0,4" Text="MEGA65 GUI is free. If it helps you, you can buy me a coffee."/>
+                        <Button Style="{StaticResource FlatRow}" Command="{Binding OpenCommand}" CommandParameter="https://buymeacoffee.com/cjf077" HorizontalAlignment="Left" Padding="0">
+                        <TextBlock Text="&#x2615; Buy me a coffee: buymeacoffee.com/cjf077" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" TextDecorations="Underline"/>
+                    </Button>
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource Card}">
