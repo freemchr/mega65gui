@@ -37,7 +37,7 @@ The in-app **Features** page shows the same list from `src/Mega65Gui.Core/Featur
 | Filehost | Browse, search and filter the public catalogue | – | – | Implemented |
 | Filehost | File detail and version history | – | – | Implemented |
 | Filehost | Download with resume, size and SHA-256 manifest | – | `mega65_ftp fhget` (to device) | Implemented |
-| Filehost | Sign in with your own Filehost account | – | – | Partial (not yet tested against a real account) |
+| Filehost | Sign in with your own Filehost account | – | – | Implemented (verified with a real account) |
 | Filehost | Owner-restricted (closed ROM) downloads | – | – | Partial: via your sign-in; the server decides access |
 | Update | Update My MEGA65 (12-step guided workflow) | – | – | Implemented |
 | Update | Core flashing from the PC | – | `mega65_ftp flash`: R2/R3 + Vivado only; refuses R4–R6 and Ethernet | Not offered: guided MEGAFLASH |

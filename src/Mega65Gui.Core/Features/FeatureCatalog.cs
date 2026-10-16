@@ -27,7 +27,7 @@ public static class FeatureCatalog
         new("Filehost", "Browse, search and filter the public catalogue", FeatureStatus.Implemented, "Internet", "readfilespublic.php", "6 h on-disk cache; offline fallback"),
         new("Filehost", "File detail and version history", FeatureStatus.Implemented, "Internet", "readfiledetail.php, readversionlistpublic.php", "Version lists are only requested for public files"),
         new("Filehost", "Download with resume, size and SHA-256 manifest", FeatureStatus.Implemented, "Internet", "Static /files/ URLs with Range", "Filehost publishes no checksums; SHA-256 is recorded locally"),
-        new("Filehost", "Sign in with your own Filehost account", FeatureStatus.Partial, "Internet", "login.php session (as the website)", "Tested against a simulated server; not yet against a real account. Optional DPAPI-encrypted saved password"),
+        new("Filehost", "Sign in with your own Filehost account", FeatureStatus.Implemented, "Internet", "login.php session (as the website)", "Verified with a real account 2026-10-16. Optional DPAPI-encrypted saved password"),
         new("Filehost", "Owner-restricted (closed ROM) downloads", FeatureStatus.Partial, "Internet", "Private link + readfiledetail under your session", "Server decides access; needs your redeemed ownership code. Not cached on disk"),
         new("Update", "Update My MEGA65 (12-step guided workflow)", FeatureStatus.Implemented, "USB/JTAG or SD only", "UpdateEngine", "Approval before every write; backups; report"),
         new("Update", "Core flashing from the PC", FeatureStatus.NotOffered, "-", "MEGAFLASH on device (guided)", "Official tools refuse R4-R6; R2/R3 need Vivado"),

@@ -89,6 +89,7 @@ The release packages themselves are discovered dynamically. Only the two tools f
 ### Sign-in (as the website does it)
 
 - **Request:** `POST login.php` with form fields `logindata[username]` and `logindata[password]`. This is jQuery's encoding of `{"logindata": {...}}`.
+- **Required header:** `X-Requested-With: XMLHttpRequest`. Without it the server answers `{"state":"NOTOK","message":"Invalid request"}` before checking credentials (verified). The app sends it on every Filehost POST.
 - **Response:** `{"state":"OK"}`, or `{"state":"NOTOK","message":…}` for bad credentials.
 - **Session:** held in the `PHPSESSID` cookie. `logout.php` ends it.
 - **Expiry:** session-aware endpoints may answer `RELOGIN`, `TIMEOUT` or `LOGINERROR`. The app treats these as "signed out".
@@ -107,7 +108,8 @@ The release packages themselves are discovered dynamically. Only the two tools f
   2. Uses the ROM package only if your account can see it.
   3. Otherwise falls back to the no-ROM package and says why.
 - **The redeem flow is not automated.** Redeem your code on the website.
-- **Not yet verified:** sign-in has been tested against a simulated Filehost, not a real account. The file-name format of the with-ROM packages is also unconfirmed. The parser accepts `…-<hash>.7z` or any suffix other than `-norom`.
+- **Verified:** sign-in works with a real account (2026-10-16).
+- **Not yet verified:** the file-name format of the with-ROM packages is unconfirmed. The parser accepts `…-<hash>.7z` or any suffix other than `-norom`.
 
 ## Open questions
 
