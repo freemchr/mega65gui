@@ -10,7 +10,7 @@ namespace Mega65Gui.Core.Filehost;
 public sealed partial record ReleaseInfo(string Target, Version Release, string? CommitHash, bool IncludesRom)
 {
     // mega65r3-release-0.97-aaf4542-norom.7z, mega65r6-release-0.97.2-03b24c6-norom.7z
-    [GeneratedRegex(@"^(?<target>mega65r\d+|nexys4ddr-widget|nexys4)-release-(?<ver>\d+(?:\.\d+){1,3})-(?<hash>[0-9a-f]{7,})(?<norom>-norom)?\.", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<target>mega65r\d+|nexys4ddr-widget|nexys4)-release-(?<ver>\d+(?:\.\d+){1,3})-(?<hash>[0-9a-f]{7,})(?<suffix>-[a-z0-9]+)?\.", RegexOptions.IgnoreCase)]
     private static partial Regex ModernName();
 
     // MEGA65-R3-Rel_0_9-norom.7z
@@ -25,7 +25,8 @@ public sealed partial record ReleaseInfo(string Target, Version Release, string?
         var m = ModernName().Match(fileName);
         if (m.Success)
             return new ReleaseInfo(m.Groups["target"].Value.ToLowerInvariant(), Version.Parse(m.Groups["ver"].Value),
-                m.Groups["hash"].Value.ToLowerInvariant(), !m.Groups["norom"].Success);
+                m.Groups["hash"].Value.ToLowerInvariant(),
+                !string.Equals(m.Groups["suffix"].Value, "-norom", StringComparison.OrdinalIgnoreCase));
 
         m = LegacyName().Match(fileName);
         if (m.Success)

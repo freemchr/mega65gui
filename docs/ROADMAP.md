@@ -8,6 +8,7 @@
 - [x] Device connection: USB/JTAG serial probe, Ethernet discovery *(hardware-unverified)*
 - [x] SD-card synchronisation: plan, approve, back up, apply, verify; D81 contiguity check
 - [x] Update My MEGA65: the 12-step workflow with reports
+- [x] Filehost sign-in with your own account; owner-only (closed ROM) packages when your account has access *(not yet tested with a real account)*
 - [x] Basic control: reset, C64/MEGA65 mode, PRG send (drag-drop), screenshot, mega65_ftp console *(hardware-unverified)*
 
 ## Hardware validation (before tagging 0.1)
@@ -19,6 +20,7 @@ Each item needs a real MEGA65, and its findings go back into `FeatureCatalog`.
 3. Confirm `etherload -D` and the mega65_ftp `-e` console on core 0.97.x.
 4. Confirm the contiguity checker on a freshly formatted card and on a fragmented one.
 5. Run the full Update My MEGA65 flow on a real card, then flash in MEGAFLASH.
+6. Sign in with a real Filehost account that has a redeemed code. Confirm the private package opens, check its file name format, and do a with-ROM update.
 
 ## Release 0.2: M65Connect parity
 
@@ -38,7 +40,6 @@ Each item needs a real MEGA65, and its findings go back into `FeatureCatalog`.
 - Memory dump/inject, unit-test runner (`m65 -u`), breakpoints, HYPPO status
 - `coretool` integration (build, verify, extract COR/MCS)
 - R2/R3 PC-side flashing via `mega65_ftp flash` + Vivado, offered only after it is verified on hardware and behind explicit confirmation
-- Signed-in Filehost access, only if the Filehost operators provide or approve a method
 
 ## Out of scope
 

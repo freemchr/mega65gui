@@ -28,6 +28,7 @@ It brings together:
 - Search and browse all 520+ public files.
 - Read details and version history.
 - Download into a local cache that also works offline.
+- Sign in with your own account to reach owner-only packages, such as releases that include the closed ROM.
 
 ### Device
 
@@ -44,7 +45,7 @@ Installs the official mega65-tools builds from the Filehost.
 - **You approve every write.** Planning is read-only.
 - **Nothing on your card is deleted.** Replaced files are backed up first.
 - **FPGA flash is never written automatically.** The official tools cannot flash R4–R6 from a PC, so the app guides you through MEGAFLASH.
-- **Owner-restricted Filehost downloads are never automated.** They open on the website.
+- **Owner-only Filehost downloads (the closed ROM) use your own Filehost account.** You sign in inside the app and the Filehost decides what you can download. Your password is never stored unless you ask, and then only DPAPI-encrypted.
 
 ## Documentation
 

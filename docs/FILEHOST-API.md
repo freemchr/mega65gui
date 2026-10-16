@@ -80,16 +80,34 @@ Notation: **verified** means a live response was observed; *inferred* means it w
 
 The release packages themselves are discovered dynamically. Only the two tools fileids are pinned.
 
-## Restricted (owner-only) content
+## Restricted (owner-only) content and sign-in
 
 - **What is restricted:** only the closed MEGA65 ROM, and packages that include it, need more than anonymous access (Filehost article "How to download closed ROM files").
-- **How access works:** a registered user signs in with a form login (`login.php`, session cookie) and redeems the paper code shipped with the machine (`redeem.php`). There is no API token or OAuth.
-- **How restriction shows in the data:** restricted files are simply absent from `readfilespublic`, and `readfiledetail` returns `EMPTY` for them.
-- **What MEGA65 GUI does:**
-  - It never automates the login or redeem flow.
-  - It never requests details, versions or files for anything outside the public catalogue. `CatalogueService.GetVersionsAsync` throws for non-public IDs.
-  - Owner-only packages are handed off to the website with "Open on website".
-- **Possible future option:** a sign-in flow inside the app, if the Filehost operators provide or approve one.
+- **How you get access:** a registered user redeems the paper ownership code shipped with the machine, once, on the website (`redeem.php`).
+- **How restriction shows in the data:** restricted files are absent from `readfilespublic`. Anonymously, `readfiledetail` returns `EMPTY` for them. The public no-ROM package descriptions contain a "private link" (`https://files.mega65.org?id=<fileid>`) to the package with the ROM.
+
+### Sign-in (as the website does it)
+
+- **Request:** `POST login.php` with form fields `logindata[username]` and `logindata[password]`. This is jQuery's encoding of `{"logindata": {...}}`.
+- **Response:** `{"state":"OK"}`, or `{"state":"NOTOK","message":…}` for bad credentials.
+- **Session:** held in the `PHPSESSID` cookie. `logout.php` ends it.
+- **Expiry:** session-aware endpoints may answer `RELOGIN`, `TIMEOUT` or `LOGINERROR`. The app treats these as "signed out".
+- **No API token or OAuth exists.**
+
+### What MEGA65 GUI does
+
+- **You sign in with your own account,** in the app's Filehost page. The password goes only to `files.mega65.org` over HTTPS, and is never logged.
+  - By default only the user name is remembered.
+  - "Remember my password" stores it encrypted with Windows DPAPI, readable only by your Windows account on that PC.
+  - Signing out deletes the saved password.
+- **The server decides access.** A non-public file ID is only queried when you are signed in, and the app only lists its versions after `readfiledetail` returns `OK` for your session. `CatalogueService` throws otherwise.
+- **Owner-only metadata is never written to the disk cache.** Downloaded packages are stored in your local download cache like any other download.
+- **Update My MEGA65 → "Include the closed ROM":**
+  1. Follows the private link from the public package.
+  2. Uses the ROM package only if your account can see it.
+  3. Otherwise falls back to the no-ROM package and says why.
+- **The redeem flow is not automated.** Redeem your code on the website.
+- **Not yet verified:** sign-in has been tested against a simulated Filehost, not a real account. The file-name format of the with-ROM packages is also unconfirmed. The parser accepts `…-<hash>.7z` or any suffix other than `-norom`.
 
 ## Open questions
 

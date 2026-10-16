@@ -11,7 +11,8 @@ public sealed record StepRecord(int Number, string Title, StepStatus Status, str
 public sealed record UpdateOptions(
     string SdCardPath,
     ConnectionTarget? Connection = null,
-    HardwareModel? ModelOverride = null);
+    HardwareModel? ModelOverride = null,
+    bool IncludeRom = false);
 
 /// <summary>The release selected for this machine and how it compares with what is installed.</summary>
 public sealed record ReleaseCandidate(FilehostFile File, FilehostVersionRow Version, ReleaseInfo Info);

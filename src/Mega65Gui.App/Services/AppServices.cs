@@ -13,10 +13,16 @@ public sealed class AppServices
     public AppServices()
     {
         Paths = AppPaths.Default();
-        Http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+        // One cookie container so a Filehost sign-in applies to catalogue reads and downloads alike.
+        Http = new HttpClient(new HttpClientHandler { CookieContainer = new System.Net.CookieContainer(), UseCookies = true })
+        {
+            Timeout = TimeSpan.FromMinutes(10),
+        };
         Http.DefaultRequestHeaders.UserAgent.ParseAdd("Mega65Gui/0.1 (+https://github.com/freemchr/mega65gui)");
         Filehost = new FilehostClient(Http);
-        Catalogue = new CatalogueService(Filehost, Paths);
+        Session = new FilehostSession(Http);
+        Credentials = new CredentialStore(Path.Combine(Paths.Root, "filehost-account.json"));
+        Catalogue = new CatalogueService(Filehost, Paths, session: Session);
         Downloads = new DownloadManager(Http, Paths);
         Runner = new ProcessRunner();
         Tools = new ToolManager(Paths, Runner);
@@ -27,6 +33,8 @@ public sealed class AppServices
     public AppPaths Paths { get; }
     public HttpClient Http { get; }
     public FilehostClient Filehost { get; }
+    public FilehostSession Session { get; }
+    public CredentialStore Credentials { get; }
     public CatalogueService Catalogue { get; }
     public DownloadManager Downloads { get; }
     public IProcessRunner Runner { get; }

@@ -23,7 +23,7 @@
                         <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
-                        <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                        <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
                     </Grid.RowDefinitions>
                     <TextBlock Text="Connection" VerticalAlignment="Center" Margin="0,0,16,8"/>
                     <TextBlock Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ConnectionText}" TextWrapping="Wrap" Margin="0,0,0,8" VerticalAlignment="Center"/>
@@ -33,7 +33,9 @@
                     <TextBlock Grid.Row="2" Text="SD card" VerticalAlignment="Center" Margin="0,0,16,8"/>
                     <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding SdCardPath, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,8"/>
                     <Button Grid.Row="2" Grid.Column="2" Content="Browse…" Command="{Binding BrowseSdCardCommand}" Margin="0,0,0,8"/>
-                    <StackPanel Grid.Row="3" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,8,0,0">
+                    <CheckBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8" IsChecked="{Binding IncludeRom}"
+                              Content="Include the closed MEGA65 ROM (needs Filehost sign-in and your redeemed ownership code)"/>
+                    <StackPanel Grid.Row="4" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,8,0,0">
                         <Button Content="Update My MEGA65" Style="{DynamicResource AccentButtonStyle}" FontSize="15" Padding="20,8"
                                 Command="{Binding RunCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource Not}}"/>
                         <Button Content="Cancel" Command="{Binding CancelCommand}" Margin="8,0,0,0"
@@ -75,7 +77,16 @@
     <!-- ============ Filehost catalogue ============ -->
     <DataTemplate DataType="{x:Type vm:CatalogueViewModel}">
         <DockPanel>
-            <TextBlock DockPanel.Dock="Top" Text="MEGA65 Filehost" Style="{StaticResource PageTitle}"/>
+            <Grid DockPanel.Dock="Top">
+                <TextBlock Text="MEGA65 Filehost" Style="{StaticResource PageTitle}"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                    <TextBlock Text="{Binding AccountText}" VerticalAlignment="Center" Margin="0,0,10,0" Style="{StaticResource Muted}"/>
+                    <Button Content="Sign in…" Command="{Binding SignInCommand}"
+                            Visibility="{Binding IsSignedIn, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}"/>
+                    <Button Content="Sign out" Command="{Binding SignOutCommand}"
+                            Visibility="{Binding IsSignedIn, Converter={StaticResource BoolToVisible}}"/>
+                </StackPanel>
+            </Grid>
             <ContentControl DockPanel.Dock="Bottom" Content="{Binding}" ContentTemplate="{StaticResource StatusFooter}"/>
             <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
                 <Grid.ColumnDefinitions>
@@ -102,8 +113,8 @@
                 <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <TextBlock Text="Select a file to see its details, version history and downloads." Style="{StaticResource Muted}"
-                                   Visibility="{Binding SelectedFile, Converter={StaticResource NullToCollapsed}, ConverterParameter=invert}"/>
-                        <StackPanel Visibility="{Binding SelectedFile, Converter={StaticResource NullToCollapsed}}">
+                                   Visibility="{Binding ViewingFileId, Converter={StaticResource NullToCollapsed}, ConverterParameter=invert}"/>
+                        <StackPanel Visibility="{Binding ViewingFileId, Converter={StaticResource NullToCollapsed}}">
                         <Border Style="{StaticResource Card}" Visibility="{Binding Detail, Converter={StaticResource NullToCollapsed}}">
                             <StackPanel>
                                 <TextBlock Text="{Binding Detail.Title}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
@@ -116,6 +127,18 @@
                                            Visibility="{Binding Detail.IsAvailable, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}"/>
                             </StackPanel>
                         </Border>
+                        <StackPanel Visibility="{Binding LinkedFiles.Count, Converter={StaticResource NullToCollapsed}}" Margin="0,0,0,10">
+                            <TextBlock Text="Linked files" Style="{StaticResource SectionTitle}"/>
+                            <ItemsControl ItemsSource="{Binding LinkedFiles}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Content="{Binding Label}" HorizontalAlignment="Left" Margin="0,0,0,6"
+                                                Command="{Binding DataContext.OpenLinkedCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                         <TextBlock Text="Version history" Style="{StaticResource SectionTitle}" Visibility="{Binding Detail, Converter={StaticResource NullToCollapsed}}"/>
                         <ListView ItemsSource="{Binding Versions}" SelectedItem="{Binding SelectedVersion}" MaxHeight="260">
                             <ListView.View>

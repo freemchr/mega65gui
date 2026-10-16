@@ -8,7 +8,7 @@ public sealed record CatalogueSnapshot(IReadOnlyList<FilehostFile> Files, DateTi
 public sealed record CatalogueQuery(string? Text = null, string? Category = null, string? Platform = null, bool OfficialOnly = false);
 
 /// <summary>Catalogue with an on-disk cache. Falls back to the last good copy when offline.</summary>
-public sealed class CatalogueService(FilehostClient client, AppPaths paths, TimeProvider? clock = null)
+public sealed class CatalogueService(FilehostClient client, AppPaths paths, TimeProvider? clock = null, FilehostSession? session = null)
 {
     public static readonly TimeSpan CatalogueTtl = TimeSpan.FromHours(6);
     public static readonly TimeSpan VersionTtl = TimeSpan.FromHours(6);
@@ -64,11 +64,22 @@ public sealed class CatalogueService(FilehostClient client, AppPaths paths, Time
 
     public bool IsPublic(string fileId) => _current?.Files.Any(f => f.FileId == fileId) ?? false;
 
-    /// <summary>Version history for a file in the public catalogue. Throws for anything else.</summary>
+    public FilehostSession? Session => session;
+
+    /// <summary>
+    /// Version history. Public files are cached. Any other file is only queried when the user is
+    /// signed in and the server confirms, through readfiledetail, that their account can see it.
+    /// Owner-only results are never written to the disk cache.
+    /// </summary>
     public async Task<IReadOnlyList<FilehostVersionRow>> GetVersionsAsync(string fileId, bool forceRefresh = false, CancellationToken ct = default)
     {
         if (!IsPublic(fileId))
-            throw new InvalidOperationException("Version history is only requested for files in the public catalogue.");
+        {
+            var detail = await GetRestrictedDetailAsync(fileId, ct);
+            if (detail is not { IsAvailable: true })
+                throw new UnauthorizedAccessException("Your Filehost account does not have access to this file.");
+            return await client.GetVersionsAsync(fileId, ct);
+        }
 
         var cacheFile = Path.Combine(paths.CatalogueCache, $"versions-{fileId}.json");
         var info = new FileInfo(cacheFile);
@@ -89,17 +100,32 @@ public sealed class CatalogueService(FilehostClient client, AppPaths paths, Time
 
     public async Task<FilehostFileDetail?> GetDetailAsync(string fileId, CancellationToken ct = default)
     {
+        if (!IsPublic(fileId)) return await GetRestrictedDetailAsync(fileId, ct);
+
         var cacheFile = Path.Combine(paths.CatalogueCache, $"detail-{fileId}.json");
         try
         {
             var d = await client.GetFileDetailAsync(fileId, ct);
-            if (d is not null) await WriteAtomicAsync(cacheFile, JsonSerializer.Serialize(new[] { d }), ct);
+            if (d is { IsAvailable: true }) await WriteAtomicAsync(cacheFile, JsonSerializer.Serialize(new[] { d }), ct);
             return d;
         }
         catch (HttpRequestException) when (File.Exists(cacheFile))
         {
             return FilehostClient.ParseFileDetail(await File.ReadAllTextAsync(cacheFile, ct));
         }
+    }
+
+    private async Task<FilehostFileDetail?> GetRestrictedDetailAsync(string fileId, CancellationToken ct)
+    {
+        if (session is not { IsSignedIn: true })
+            throw new UnauthorizedAccessException("This file is not public. Sign in to the Filehost with your account to check access.");
+        var d = await client.GetFileDetailAsync(fileId, ct);
+        if (FilehostSession.IsExpiredState(d?.State))
+        {
+            session.MarkExpired();
+            throw new UnauthorizedAccessException("Your Filehost session has expired. Please sign in again.");
+        }
+        return d;
     }
 
     private static async Task WriteAtomicAsync(string path, string content, CancellationToken ct)

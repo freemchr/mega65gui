@@ -34,6 +34,9 @@ public partial class App : Application
         {
             vm.Selected = page;
             await page.OnShownAsync();
+            if (page is CatalogueViewModel cat)
+                cat.SelectedFile = cat.Results.FirstOrDefault(f => f.Title.Contains("Release Package (mega65r6)"));
+            await Task.Delay(300);
             for (var n = 0; n < 50 && page.IsBusy; n++) await Task.Delay(200);
             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
             var dpi = VisualTreeHelper.GetDpi(window);

@@ -50,7 +50,7 @@ Everything is stored under `%LOCALAPPDATA%\Mega65Gui\`:
 - **Nothing is ever deleted from the card.** Files that exist only on the card are reported but left untouched.
 - **No FPGA flash writes, and no destructive device commands, during an update.**
 - **Unverified data is labelled.** Device values carry a `Provenance` (`ReadFromDevice` / `UserSupplied` / `NotKnown`), and features carry a `FeatureStatus`.
-- **Owner-restricted Filehost content is never requested.**
+- **Owner-restricted Filehost content is only requested while you are signed in with your own account, and only after the server confirms your access.** It is never written to the metadata cache.
 
 ## Building
 

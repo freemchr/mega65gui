@@ -66,7 +66,7 @@ public sealed class FilehostCatalogueTests : IDisposable
         Assert.Equal(1, handler.Calls);
 
         Assert.NotEmpty(svc.Search(new CatalogueQuery(Text: "mega65r6", OfficialOnly: true)));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => svc.GetVersionsAsync("a0276005-e71c-4b2d-8d17-2aa92e492c50"));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => svc.GetVersionsAsync("a0276005-e71c-4b2d-8d17-2aa92e492c50"));
     }
 
     [Fact]

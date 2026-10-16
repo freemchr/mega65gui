@@ -110,6 +110,12 @@ public sealed class UpdateEngine(
         // 3. Releases
         Set(3, StepStatus.Running, "");
         var candidate = await FindReleaseAsync(model, ct);
+        string? romNote = null;
+        if (o.IncludeRom && candidate is not null)
+        {
+            (var withRom, romNote) = await FindRomReleaseAsync(candidate, ct);
+            if (withRom is not null) candidate = withRom;
+        }
         if (candidate is null)
         {
             Set(3, StepStatus.Failed, $"No public stable release package targets {model}.");
@@ -117,7 +123,8 @@ public sealed class UpdateEngine(
             return;
         }
         _report.Release = candidate;
-        Set(3, StepStatus.Done, $"{candidate.File.Title}: release {candidate.Info.Release} ({candidate.Version.FileName}, {candidate.Version.Published}).");
+        Set(3, StepStatus.Done, $"{candidate.File.Title}: release {candidate.Info.Release} ({candidate.Version.FileName}, {candidate.Version.Published})."
+            + (romNote is null ? "" : $"\n{romNote}"));
 
         // 4. Summary
         Set(4, StepStatus.Running, "");
@@ -254,6 +261,43 @@ public sealed class UpdateEngine(
     /// The monitor's "build GIT:" line and the package file names both embed the commit hash,
     /// so the core counts as current when the running build string contains the release hash.
     /// </summary>
+    /// <summary>
+    /// The no-ROM package description links to the owner-only package that includes the closed
+    /// ROM. That package is only used when the signed-in account can see it (checked by the server).
+    /// </summary>
+    internal async Task<(ReleaseCandidate? Candidate, string Note)> FindRomReleaseAsync(ReleaseCandidate publicRelease, CancellationToken ct)
+    {
+        if (catalogue.Session is not { IsSignedIn: true })
+            return (null, "Not signed in to the Filehost, so the package without the closed ROM is used.");
+
+        var detail = await catalogue.GetDetailAsync(publicRelease.File.FileId, ct);
+        foreach (var id in FilehostLinks.Extract(detail?.Description).Where(id => !catalogue.IsPublic(id)))
+        {
+            IReadOnlyList<FilehostVersionRow> versions;
+            FilehostFileDetail? romDetail;
+            try
+            {
+                romDetail = await catalogue.GetDetailAsync(id, ct);
+                if (romDetail is not { IsAvailable: true }) continue;
+                versions = await catalogue.GetVersionsAsync(id, ct: ct);
+            }
+            catch (UnauthorizedAccessException) { continue; }
+
+            var best = versions
+                .Where(v => v.IsActive)
+                .Select(v => (v, info: ReleaseInfo.TryParse(v.FileName, v.Comment)))
+                .Where(x => x.info is { IncludesRom: true } && x.info.Release >= publicRelease.Info.Release)
+                .OrderByDescending(x => x.info!.Release)
+                .FirstOrDefault();
+            if (best.info is null) continue;
+
+            var file = new FilehostFile { FileId = id, Title = romDetail.Title ?? "Release package with ROM", Author = romDetail.Author,
+                Category = romDetail.Category, Type = romDetail.Type };
+            return (new ReleaseCandidate(file, best.v, best.info), "Using the package that includes the closed ROM (your Filehost account has access).");
+        }
+        return (null, "Your Filehost account cannot see a package with the closed ROM (redeem your ownership code on the Filehost), so the package without the ROM is used.");
+    }
+
     internal static CoreComparison CompareCore(DeviceState device, ReleaseInfo release)
     {
         if (string.IsNullOrWhiteSpace(device.CoreBuild) || release.CommitHash is null) return CoreComparison.InstalledUnknown;

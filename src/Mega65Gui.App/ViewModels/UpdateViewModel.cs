@@ -42,6 +42,7 @@ public sealed partial class UpdateViewModel(AppServices services, IApprovalGate 
 
     [ObservableProperty] private string _sdCardPath = "";
     [ObservableProperty] private ModelChoice? _selectedModel;
+    [ObservableProperty] private bool _includeRom;
 
     [ObservableProperty] private string? _reportPath;
     [ObservableProperty] private string _connectionText = "Not connected";
@@ -70,6 +71,11 @@ public sealed partial class UpdateViewModel(AppServices services, IApprovalGate 
             Status = "Choose the SD card folder first.";
             return;
         }
+        if (IncludeRom && !services.Session.IsSignedIn && !Views.SignInWindow.Show(services))
+        {
+            Status = "Sign in to the Filehost to include the closed ROM, or untick that option.";
+            return;
+        }
         foreach (var s in Steps) { s.Status = StepStatus.Pending; s.Detail = ""; }
         Log.Clear();
         ReportPath = null;
@@ -86,7 +92,7 @@ public sealed partial class UpdateViewModel(AppServices services, IApprovalGate 
 
         await GuardAsync(async () =>
         {
-            var report = await Task.Run(() => engine.RunAsync(new UpdateOptions(SdCardPath, services.Connection, SelectedModel?.Model), log, _cts.Token));
+            var report = await Task.Run(() => engine.RunAsync(new UpdateOptions(SdCardPath, services.Connection, SelectedModel?.Model, IncludeRom), log, _cts.Token));
             ReportPath = report.Steps.FirstOrDefault(s => s.Number == 12)?.Detail;
             Status = report.Outcome ?? "";
         }, "Working…");
