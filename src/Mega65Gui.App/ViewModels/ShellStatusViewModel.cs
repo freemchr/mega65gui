@@ -21,6 +21,7 @@ public sealed partial class ShellStatusViewModel : ObservableObject
 
     [ObservableProperty] private bool _isSignedIn;
     [ObservableProperty] private string _accountName = "Filehost";
+    [ObservableProperty] private string _accountTooltip = "";
     [ObservableProperty] private string _accountDetail = "Not signed in";
     [ObservableProperty] private string _initial = "?";
     [ObservableProperty] private string _deviceText = "No device";
@@ -32,8 +33,11 @@ public sealed partial class ShellStatusViewModel : ObservableObject
     public void Refresh()
     {
         IsSignedIn = _services.Session.IsSignedIn;
-        AccountName = _services.Session.UserName ?? "Filehost account";
-        AccountDetail = IsSignedIn ? "Signed in · files.mega65.org" : "Not signed in";
+        var user = _services.Session.UserName;
+        // E-mail addresses are long; show the local part and keep the full name in the tooltip.
+        AccountName = user is null ? "Filehost account" : user.Split('@')[0];
+        AccountTooltip = user is null ? "Sign in to files.mega65.org" : $"Signed in to files.mega65.org as {user}";
+        AccountDetail = IsSignedIn ? "Signed in to Filehost" : "Not signed in";
         Initial = IsSignedIn ? _services.Session.UserName![..1].ToUpperInvariant() : "?";
 
         DeviceConnected = _services.Connection is not null;

@@ -59,12 +59,12 @@
                     </StackPanel>
 
                     <!-- Account card -->
-                    <Border CornerRadius="6" Padding="8" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                    <Border CornerRadius="6" Padding="8,8,4,8" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" ToolTip="{Binding AccountTooltip}">
                         <StackPanel>
                             <Grid>
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
-                                <Border Width="30" Height="30" CornerRadius="15" Margin="0,0,8,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Border Width="28" Height="28" CornerRadius="14" Margin="0,0,8,0" VerticalAlignment="Center">
                                     <Border.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background" Value="{DynamicResource ControlStrongFillColorDefaultBrush}"/>
@@ -75,22 +75,24 @@
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
-                                    <TextBlock Text="{Binding Initial}" Foreground="White" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Initial}" Foreground="White" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding AccountName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding AccountName}" FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Text="{Binding AccountDetail}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
+                                <Button Grid.Column="2" Command="{Binding SignOutCommand}" ToolTip="Sign out" Padding="6" MinWidth="0" MinHeight="0"
+                                        Background="Transparent" BorderThickness="0" VerticalAlignment="Center"
+                                        Visibility="{Binding IsSignedIn, Converter={StaticResource BoolToVisible}}">
+                                    <TextBlock Text="&#xF3B1;" Style="{StaticResource Icon}" FontSize="13"/>
+                                </Button>
                             </Grid>
-                            <TextBlock Text="{Binding Message}" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
+                            <TextBlock Text="{Binding Message}" FontSize="11" TextWrapping="Wrap" Margin="0,6,4,0"
                                        Foreground="{DynamicResource SystemFillColorCautionBrush}"
                                        Visibility="{Binding Message, Converter={StaticResource NullToCollapsed}}"/>
-                            <Button Content="Sign in" Margin="0,8,0,0" HorizontalAlignment="Stretch" Style="{DynamicResource AccentButtonStyle}"
+                            <Button Content="Sign in" Margin="0,8,4,0" HorizontalAlignment="Stretch" Style="{DynamicResource AccentButtonStyle}"
                                     Command="{Binding SignInCommand}"
                                     Visibility="{Binding IsSignedIn, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}"/>
-                            <Button Content="Sign out" Margin="0,8,0,0" HorizontalAlignment="Stretch"
-                                    Command="{Binding SignOutCommand}"
-                                    Visibility="{Binding IsSignedIn, Converter={StaticResource BoolToVisible}}"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
