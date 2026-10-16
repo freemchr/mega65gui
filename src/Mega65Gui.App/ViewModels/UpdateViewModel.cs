@@ -19,8 +19,18 @@ public sealed partial class StepRow(int number, string title) : ObservableObject
     [ObservableProperty] private string _detail = "";
 }
 
-public sealed partial class UpdateViewModel(AppServices services, IApprovalGate gate) : PageViewModel("Update My MEGA65", "\uE895")
+public sealed partial class UpdateViewModel : PageViewModel
 {
+    private readonly AppServices services;
+    private readonly IApprovalGate gate;
+
+    public UpdateViewModel(AppServices services, IApprovalGate gate) : base("Update My MEGA65", "\uE895")
+    {
+        this.services = services;
+        this.gate = gate;
+        services.ConnectionChanged += ShowConnection;
+    }
+
     private CancellationTokenSource? _cts;
 
 
@@ -55,16 +65,71 @@ public sealed partial class UpdateViewModel(AppServices services, IApprovalGate 
 
     partial void OnCardInDeviceChanged(bool value) => _cardChoiceMade = true;
 
+    public ObservableCollection<string> Ports { get; } = [];
+    [ObservableProperty] private string? _selectedPort;
+
     public override Task OnShownAsync()
     {
         SelectedModel ??= ModelChoices[0];
-        IsConnected = services.Connection is not null;
-        // Default to the card inside the MEGA65 whenever one is connected, until the user chooses.
-        if (!_cardChoiceMade) { CardInDevice = IsConnected; _cardChoiceMade = false; }
-        ConnectionText = services.Connection is { } c
-            ? $"{c} – {services.Device.Model} ({services.Device.ModelSource})"
-            : "Not connected. Connect on the Device page to read the model and core automatically, or choose the model below.";
+        RefreshPorts();
+        ShowConnection();
+        // Default to the card inside the MEGA65 when one is connected or its USB/JTAG adapter is present.
+        if (!_cardChoiceMade) { CardInDevice = IsConnected || Ports.Count > 0; _cardChoiceMade = false; }
         return Task.CompletedTask;
+    }
+
+    private void ShowConnection()
+    {
+        IsConnected = services.Connection is not null;
+        ConnectionText = services.Connection is { } c
+            ? services.Device.NoResponse
+                ? $"{c} – the MEGA65 is not answering. Make sure it is on and showing its normal screen."
+                : $"{c} – MEGA65 {services.Device.Model}, running core {services.Device.CoreBuild ?? "unknown"}, ROM {services.Device.RomVersion ?? "unknown"}"
+            : services.LostPort is { } lost
+                ? $"Disconnected ({lost} has gone). Switch the MEGA65 on; it reconnects automatically."
+                : "Not connected. Update My MEGA65 connects automatically, or pick the port and press Connect.";
+    }
+
+    [RelayCommand]
+    private void RefreshPorts()
+    {
+        var keep = SelectedPort;
+        Ports.Clear();
+        foreach (var p in SerialMonitorProbe.ListPorts()) Ports.Add(p);
+        SelectedPort = keep is not null && Ports.Contains(keep) ? keep : Ports.LastOrDefault();
+    }
+
+    [RelayCommand]
+    private Task ConnectAsync() => GuardAsync(async () =>
+    {
+        if (await EnsureConnectedAsync()) Status = "";
+    }, "Connecting…");
+
+    /// <summary>
+    /// Connects over USB/JTAG when not connected: the selected port, or the only port there is.
+    /// Returns false with a message in Status when that is not possible.
+    /// </summary>
+    private async Task<bool> EnsureConnectedAsync()
+    {
+        if (services.Connection is not null && !services.Device.NoResponse) return true;
+        RefreshPorts();
+        var port = SelectedPort ?? (Ports.Count == 1 ? Ports[0] : null);
+        if (Ports.Count == 0)
+        {
+            Status = "No MEGA65 found over USB/JTAG. Switch it on and plug in the USB cable" +
+                     (CardInDevice ? ", or choose \"In a PC card reader\"." : ", or choose your model.");
+            return false;
+        }
+        if (port is null) { Status = "Choose the MEGA65's COM port and press Connect."; return false; }
+
+        Status = $"Connecting to the MEGA65 on {port}…";
+        var state = await services.ConnectSerialAsync(port);
+        if (state.NoResponse)
+        {
+            Status = $"The MEGA65 did not answer on {port}. Make sure it is switched on and showing its normal screen (not the ROM selection screen or MEGAFLASH), then try again.";
+            return false;
+        }
+        return true;
     }
 
     [RelayCommand]
@@ -77,9 +142,19 @@ public sealed partial class UpdateViewModel(AppServices services, IApprovalGate 
     [RelayCommand]
     private async Task RunAsync()
     {
+        // Connect first when the update needs the MEGA65: the card is inside it, or the model is "Auto".
+        var needsDevice = CardInDevice || SelectedModel?.Model is null;
+        if (needsDevice && (services.Connection is null || services.Device.NoResponse))
+        {
+            IsBusy = true;
+            try
+            {
+                if (!await EnsureConnectedAsync()) return;
+            }
+            finally { IsBusy = false; }
+        }
         if (CardInDevice)
         {
-            if (services.Connection is null) { Status = "Connect to the MEGA65 on the Device page first, or choose a card in a PC reader."; return; }
             if (services.Tools.Current is null) { Status = "Updating the card inside the MEGA65 needs the device tools. Install them from the sidebar."; return; }
         }
         else if (string.IsNullOrWhiteSpace(SdCardPath) || !Directory.Exists(SdCardPath))

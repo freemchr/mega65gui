@@ -17,6 +17,7 @@ public sealed partial class DeviceViewModel : PageViewModel
     {
         this.services = services;
         services.ToolsChanged += () => System.Windows.Application.Current.Dispatcher.Invoke(UpdateTools);
+        services.ConnectionChanged += ShowConnection;
         UpdateTools();
 
         // Watch the COM port: the USB/JTAG adapter disappears from Windows when the MEGA65 is
@@ -37,9 +38,8 @@ public sealed partial class DeviceViewModel : PageViewModel
         if (services.Connection is { Kind: ConnectionKind.Serial } c && !ports.Contains(c.Address, StringComparer.OrdinalIgnoreCase))
         {
             _lostPort = c.Address;
-            services.LostPort = c.Address;
-            SetDisconnected($"Disconnected: {c.Address} has gone. The MEGA65 was switched off or its USB cable unplugged. " +
-                            "It reconnects automatically when it comes back.");
+            services.SetConnection(null, DeviceState.Unknown, c.Address);
+            RefreshPorts();
             return;
         }
 
@@ -55,20 +55,9 @@ public sealed partial class DeviceViewModel : PageViewModel
         _portBackAt = default;
         RefreshPorts();
         SelectedPort = port;
-        services.LostPort = null;
         await ConnectSerialAsync();
     }
 
-    private void SetDisconnected(string message)
-    {
-        services.Connection = null;
-        services.Device = DeviceState.Unknown;
-        IsConnected = false;
-        ConnectionText = "Disconnected";
-        DeviceText = message;
-        RefreshPorts();
-        (System.Windows.Application.Current.MainWindow?.DataContext as MainViewModel)?.Shell.Refresh();
-    }
 
     [ObservableProperty] private bool _toolsMissing;
     [ObservableProperty] private bool _installingTools;
@@ -118,10 +107,8 @@ public sealed partial class DeviceViewModel : PageViewModel
     {
         if (SelectedPort is null) { Status = "Choose a COM port."; return; }
         _lostPort = null;
-        services.LostPort = null;
-        var target = ConnectionTarget.Serial(SelectedPort);
-        var state = await Task.Run(() => new DeviceProbe().ProbeAsync(target));
-        SetConnected(target, state);
+        await services.ConnectSerialAsync(SelectedPort);
+        Status = "";
     }, "Reading device state over USB/JTAG…");
 
     [RelayCommand]
@@ -140,17 +127,26 @@ public sealed partial class DeviceViewModel : PageViewModel
     private void ConnectEthernet()
     {
         if (SelectedEthernet is null) return;
-        SetConnected(ConnectionTarget.Ethernet(SelectedEthernet), DeviceState.Unknown);
+        services.SetConnection(ConnectionTarget.Ethernet(SelectedEthernet), DeviceState.Unknown);
     }
 
-    private void SetConnected(ConnectionTarget target, DeviceState state)
+    /// <summary>Shows the shared connection state (set here, by Update My MEGA65 or by the port watcher).</summary>
+    private void ShowConnection()
     {
-        services.Connection = target;
-        services.Device = state with { Connection = target };
-        IsConnected = true;
-        (System.Windows.Application.Current.MainWindow?.DataContext as MainViewModel)?.Shell.Refresh();
+        var target = services.Connection;
+        var state = services.Device;
+        IsConnected = target is not null;
+        if (target is null)
+        {
+            ConnectionText = services.LostPort is null ? "Not connected" : "Disconnected";
+            DeviceText = services.LostPort is { } lost
+                ? $"Disconnected: {lost} has gone. The MEGA65 was switched off or its USB cable unplugged. It reconnects automatically when it comes back."
+                : "Plug in the USB/JTAG cable, choose its COM port and press Connect. The model, core and ROM are read automatically.";
+            return;
+        }
+        if (target.Kind == ConnectionKind.Serial) SelectedPort = target.Address;
         ConnectionText = target.ToString();
-        DeviceText = services.Device.NoResponse
+        DeviceText = state.NoResponse
             ? $"The MEGA65 did not answer on {target.Address}. The port opened, but nothing came back.\n\n" +
               "Check that:\n" +
               " • the MEGA65 is switched on and showing its normal screen (not MEGAFLASH or a black screen);\n" +
@@ -162,7 +158,6 @@ public sealed partial class DeviceViewModel : PageViewModel
             ? "Connected over Ethernet. Model and core cannot be read over Ethernet with the official tools."
             : $"Model: {state.Model} ({state.ModelSource})\nRunning core: {state.CoreBuild ?? "not read"}\nROM: {state.RomVersion ?? "not read"}\n\n" +
               "This is the core running right now. If the MEGA65 started from the factory core (slot 0), slot 1 may hold a newer one; MEGAFLASH shows each slot.";
-        Status = "";
     }
 
     [RelayCommand] private Task ResetAsync() => RunToolAsync((c, t) => c.ResetAsync(t), "Resetting…");

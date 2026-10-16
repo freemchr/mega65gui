@@ -54,7 +54,31 @@
                                Text="The card inside the MEGA65 is updated over the connection: its files are backed up to this PC first, only approved changes are uploaded, and every upload is read back and checked."
                                Visibility="{Binding CardInDevice, Converter={StaticResource BoolToVisible}}"/>
 
-                    <TextBlock Grid.Row="2" Grid.ColumnSpan="6" Text="{Binding ConnectionText}" Style="{StaticResource Muted}" Margin="0,8,0,0"/>
+                    <DockPanel Grid.Row="2" Grid.ColumnSpan="6" Margin="0,8,0,0">
+                        <!-- Inline connect when not connected -->
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
+                                    Visibility="{Binding IsConnected, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}">
+                            <ComboBox ItemsSource="{Binding Ports}" SelectedItem="{Binding SelectedPort}" MinWidth="100" Margin="0,0,6,0"
+                                      ToolTip="The MEGA65's USB/JTAG port"/>
+                            <Button Command="{Binding RefreshPortsCommand}" ToolTip="Refresh ports" Margin="0,0,6,0">
+                                <TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12"/>
+                            </Button>
+                            <Button Content="Connect" Command="{Binding ConnectCommand}"/>
+                        </StackPanel>
+                        <Ellipse VerticalAlignment="Center" Margin="0,0,8,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse" BasedOn="{StaticResource Dot}">
+                                    <Setter Property="Fill" Value="#8A8A8A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource M65Green}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="{Binding ConnectionText}" Style="{StaticResource Muted}" VerticalAlignment="Center"/>
+                    </DockPanel>
 
                     <DockPanel Grid.Row="3" Grid.ColumnSpan="6" Margin="0,10,0,0">
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">

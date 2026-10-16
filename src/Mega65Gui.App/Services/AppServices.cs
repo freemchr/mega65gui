@@ -43,12 +43,32 @@ public sealed class AppServices
     public ToolManager Tools { get; }
     public IContiguityChecker Contiguity { get; }
 
-    /// <summary>The connection chosen on the Device page, shared with Update My MEGA65.</summary>
-    public ConnectionTarget? Connection { get; set; }
-    public DeviceState Device { get; set; } = DeviceState.Unknown;
+    /// <summary>The current device connection, shared by the Device page, Update My MEGA65 and the sidebar.</summary>
+    public ConnectionTarget? Connection { get; private set; }
+    public DeviceState Device { get; private set; } = DeviceState.Unknown;
 
     /// <summary>Serial port of a connection that dropped (MEGA65 off or unplugged); null otherwise.</summary>
-    public string? LostPort { get; set; }
+    public string? LostPort { get; private set; }
+
+    /// <summary>Raised on the UI thread whenever the connection or device state changes.</summary>
+    public event Action? ConnectionChanged;
+
+    /// <summary>Connects over USB/JTAG and reads model, core and ROM (read-only monitor commands).</summary>
+    public async Task<DeviceState> ConnectSerialAsync(string port, CancellationToken ct = default)
+    {
+        var target = ConnectionTarget.Serial(port);
+        var state = await Task.Run(() => new DeviceProbe().ProbeAsync(target, ct), ct);
+        SetConnection(target, state);
+        return Device;
+    }
+
+    public void SetConnection(ConnectionTarget? target, DeviceState state, string? lostPort = null)
+    {
+        Connection = target;
+        Device = target is null ? DeviceState.Unknown : state with { Connection = target };
+        LostPort = target is null ? lostPort : null;
+        ConnectionChanged?.Invoke();
+    }
 
     public Mega65Commands? Commands => Tools.Current is { } t ? new Mega65Commands(t, Runner) : null;
 

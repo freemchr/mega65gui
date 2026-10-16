@@ -18,6 +18,7 @@ public sealed partial class ShellStatusViewModel : ObservableObject
         _services = services;
         services.Session.Changed += () => Application.Current.Dispatcher.Invoke(Refresh);
         services.ToolsChanged += () => Application.Current.Dispatcher.Invoke(Refresh);
+        services.ConnectionChanged += Refresh;
         Refresh();
     }
 
