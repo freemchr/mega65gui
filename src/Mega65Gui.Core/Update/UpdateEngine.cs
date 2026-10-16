@@ -1,0 +1,326 @@
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Mega65Gui.Core.Common;
+using Mega65Gui.Core.Device;
+using Mega65Gui.Core.Filehost;
+using Mega65Gui.Core.Packages;
+using Mega65Gui.Core.Sd;
+
+namespace Mega65Gui.Core.Update;
+
+/// <summary>
+/// "Update My MEGA65". Each of the twelve steps is recorded in the report. Nothing on the SD
+/// card changes without explicit approval, nothing is ever deleted, and FPGA flash is never
+/// written automatically: the official tools cannot flash R4–R6 from a PC, so core
+/// installation is always guided through the on-device MEGAFLASH utility.
+/// </summary>
+public sealed class UpdateEngine(
+    CatalogueService catalogue,
+    DownloadManager downloads,
+    IDeviceProbe probe,
+    IApprovalGate gate,
+    AppPaths paths,
+    IContiguityChecker? contiguity = null)
+{
+    public static readonly string[] StepTitles =
+    [
+        "Identify connection and device capabilities",
+        "Determine hardware and software versions",
+        "Discover compatible Filehost releases",
+        "Present change summary",
+        "Download and validate release package",
+        "Compare release package with SD card",
+        "Back up affected files",
+        "Apply approved SD-card changes",
+        "Stage FPGA core",
+        "Install core (verified operation or guided)",
+        "Verify completed operations",
+        "Save operation report",
+    ];
+
+    public event Action<StepRecord>? StepChanged;
+
+    private UpdateReport _report = null!;
+
+    public async Task<UpdateReport> RunAsync(UpdateOptions options, IProgress<string>? log = null, CancellationToken ct = default)
+    {
+        _report = new UpdateReport { Started = DateTimeOffset.Now };
+        try
+        {
+            await RunStepsAsync(options, log, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            _report.Outcome ??= "Cancelled by user.";
+        }
+        catch (Exception e) when (e is IOException or HttpRequestException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            var current = _report.Steps.LastOrDefault(s => s.Status == StepStatus.Running);
+            if (current is not null) Set(current.Number, StepStatus.Failed, e.Message);
+            _report.Outcome = $"Stopped: {e.Message}";
+        }
+        finally
+        {
+            _report.Finished = DateTimeOffset.Now;
+            Set(12, StepStatus.Running, "Writing report");
+            try
+            {
+                Set(12, StepStatus.Done, await SaveReportAsync(_report, CancellationToken.None));
+            }
+            catch (Exception e)
+            {
+                // The update result is still returned to the caller even if the report cannot be written.
+                Set(12, StepStatus.Failed, $"Report could not be saved: {e.Message}");
+            }
+        }
+        return _report;
+    }
+
+    private async Task RunStepsAsync(UpdateOptions o, IProgress<string>? log, CancellationToken ct)
+    {
+        // 1. Connection and capabilities
+        Set(1, StepStatus.Running, "");
+        DeviceState device = DeviceState.Unknown;
+        if (o.Connection is { } conn)
+        {
+            try { device = await probe.ProbeAsync(conn, ct); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or TimeoutException)
+            {
+                log?.Report($"Device probe failed: {e.Message}");
+            }
+            Set(1, StepStatus.Done, $"{conn}. Remote read-back {(conn.Kind == ConnectionKind.Serial ? "available" : "not available over Ethernet")}.");
+        }
+        else Set(1, StepStatus.Done, "No device connection. Working from the SD card only.");
+        _report.Device = device;
+
+        // 2. Versions
+        Set(2, StepStatus.Running, "");
+        var model = device.Model != HardwareModel.Unknown ? device.Model : o.ModelOverride ?? HardwareModel.Unknown;
+        _report.Model = model;
+        if (model == HardwareModel.Unknown)
+        {
+            Set(2, StepStatus.NeedsUser, "Hardware model unknown. Connect over USB/JTAG or choose the model manually.");
+            _report.Outcome = "Model required.";
+            return;
+        }
+        var source = device.Model != HardwareModel.Unknown ? "read from device" : "selected by user";
+        Set(2, StepStatus.Done, $"Model {model} ({source}); core {device.CoreBuild ?? "unknown"}; ROM {device.RomVersion ?? "unknown"}.");
+
+        // 3. Releases
+        Set(3, StepStatus.Running, "");
+        var candidate = await FindReleaseAsync(model, ct);
+        if (candidate is null)
+        {
+            Set(3, StepStatus.Failed, $"No public stable release package targets {model}.");
+            _report.Outcome = "No compatible release.";
+            return;
+        }
+        _report.Release = candidate;
+        Set(3, StepStatus.Done, $"{candidate.File.Title}: release {candidate.Info.Release} ({candidate.Version.FileName}, {candidate.Version.Published}).");
+
+        // 4. Summary
+        Set(4, StepStatus.Running, "");
+        _report.Core = CompareCore(device, candidate.Info);
+        var summary = new StringBuilder()
+            .AppendLine($"Machine: MEGA65 {model} ({source})")
+            .AppendLine($"Installed core: {device.CoreBuild ?? "unknown (not read from device)"}")
+            .AppendLine($"Available: release {candidate.Info.Release}, commit {candidate.Info.CommitHash ?? "n/a"}")
+            .AppendLine(_report.Core switch
+            {
+                CoreComparison.UpToDate => "The running core already matches this release.",
+                CoreComparison.UpdateAvailable => "A different core is available.",
+                _ => "The installed core could not be read, so the SD card will be compared file by file.",
+            })
+            .AppendLine()
+            .AppendLine("Next: download the package and compare it with your SD card. Nothing is written yet.")
+            .ToString();
+        Set(4, StepStatus.Done, summary);
+        if (!await gate.ConfirmAsync("Update My MEGA65", summary, ct)) { _report.Outcome = "Cancelled at summary."; return; }
+
+        // 5. Download and validate
+        Set(5, StepStatus.Running, candidate.Version.FileName);
+        var manifest = await downloads.DownloadAsync(candidate.Version, null, ct);
+        _report.DownloadSha256 = manifest.Sha256;
+        var extracted = await PackageExtractor.ExtractAsync(downloads.PathOf(manifest), Path.Combine(paths.Extracted, candidate.Version.VersionId), ct);
+        var package = ReleasePackage.Inspect(extracted);
+        var coreFile = SelectCore(package, model);
+        if (package.SdCardRoot is null) throw new InvalidDataException("The release package has no recognisable SD-card files.");
+        Set(5, StepStatus.Done, $"{manifest.Size:N0} bytes, sha256 {manifest.Sha256}. Core: {(coreFile is null ? "none for this model" : Path.GetFileName(coreFile))}.");
+
+        // 6. Compare with card
+        Set(6, StepStatus.Running, "");
+        var plan = await new SdSyncPlanner().PlanAsync(package.SdCardRoot, o.SdCardPath, log, ct);
+        var adds = plan.Items.Count(i => i.Action == SyncAction.Add);
+        var reps = plan.Items.Count(i => i.Action == SyncAction.Replace);
+        Set(6, StepStatus.Done, $"{adds} to add, {reps} to replace, {plan.Items.Count(i => i.Action == SyncAction.Unchanged)} unchanged, {plan.Items.Count(i => i.Action == SyncAction.TargetOnly)} of your own files left alone.");
+
+        // 7 + 8. Backup and apply
+        if (plan.Changes.Any())
+        {
+            var approved = await gate.ApproveChangesAsync("Approve SD-card changes", plan, ct);
+            if (approved is null) { _report.Outcome = "Cancelled before SD changes."; Set(7, StepStatus.Skipped, "Cancelled"); Set(8, StepStatus.Skipped, "Cancelled"); return; }
+            Set(7, StepStatus.Running, "");
+            Set(8, StepStatus.Running, "");
+            var result = await new SdSyncExecutor(contiguity).ApplyAsync(plan, approved, paths.Backups, log, ct);
+            _report.SdSync = result;
+            var backedUp = result.Results.Count(r => r.BackupPath is not null);
+            Set(7, StepStatus.Done, backedUp == 0 ? "No existing files needed backing up." : $"{backedUp} file(s) backed up to {result.BackupDirectory}.");
+            var written = result.Results.Count(r => r.Outcome == ItemOutcome.Written);
+            var failed = result.Results.Where(r => r.Outcome == ItemOutcome.Failed).ToList();
+            Set(8, failed.Count == 0 ? StepStatus.Done : StepStatus.Failed,
+                $"{written} written, {result.Results.Count(r => r.Outcome == ItemOutcome.Skipped)} skipped, {failed.Count} failed."
+                + string.Concat(failed.Select(f => $"\n  {f.Item.RelativePath}: {f.Message}")));
+        }
+        else
+        {
+            Set(7, StepStatus.Skipped, "Nothing to back up.");
+            Set(8, StepStatus.Skipped, "The SD card already matches the release.");
+        }
+
+        // 9. Stage core
+        string? stagedCore = null;
+        if (coreFile is null)
+            Set(9, StepStatus.Skipped, "This package has no core file for the model.");
+        else if (_report.Core == CoreComparison.UpToDate)
+            Set(9, StepStatus.Skipped, "The running core already matches this release.");
+        else
+        {
+            Set(9, StepStatus.Running, "");
+            var coreDir = Path.GetDirectoryName(coreFile)!;
+            var corePlan = await new SdSyncPlanner().PlanAsync(coreDir, o.SdCardPath, null, ct);
+            var coreRel = Path.GetFileName(coreFile);
+            var coreItem = corePlan.Items.First(i => string.Equals(i.RelativePath, coreRel, StringComparison.OrdinalIgnoreCase));
+            corePlan = corePlan with { Items = [coreItem], Warnings = [] };
+            stagedCore = coreRel;
+            if (coreItem.Action == SyncAction.Unchanged)
+                Set(9, StepStatus.Done, $"{coreRel} is already on the card.");
+            else if (await gate.ConfirmAsync("Stage core", $"Copy {coreRel} to the root of the SD card so MEGAFLASH can install it?", ct))
+            {
+                var r = await new SdSyncExecutor().ApplyAsync(corePlan, new HashSet<string> { coreRel }, paths.Backups, log, ct);
+                _report.CoreStaging = r;
+                Set(9, r.AllSucceeded ? StepStatus.Done : StepStatus.Failed, r.AllSucceeded ? $"{coreRel} copied and verified." : r.Results[0].Message ?? "Failed");
+            }
+            else { stagedCore = null; Set(9, StepStatus.Skipped, "Declined by user."); }
+        }
+
+        // 10. Core installation: guided only
+        if (stagedCore is null)
+            Set(10, StepStatus.Skipped, "No core staged.");
+        else
+        {
+            _report.GuidedInstructions = GuidedFlashInstructions(model, stagedCore);
+            Set(10, StepStatus.NeedsUser, _report.GuidedInstructions);
+        }
+
+        // 11. Verify
+        Set(11, StepStatus.Running, "");
+        var verify = await new SdSyncPlanner().PlanAsync(package.SdCardRoot, o.SdCardPath, null, ct);
+        var approvedPaths = _report.SdSync?.Results.Where(r => r.Outcome == ItemOutcome.Written).Select(r => r.Item.RelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase) ?? [];
+        var stillDifferent = verify.Changes.Where(c => approvedPaths.Contains(c.RelativePath)).ToList();
+        var declined = verify.Changes.Count() - stillDifferent.Count;
+        Set(11, stillDifferent.Count == 0 ? StepStatus.Done : StepStatus.Failed,
+            stillDifferent.Count == 0
+                ? $"All written files match the release on re-read.{(declined > 0 ? $" {declined} change(s) you declined remain." : "")}"
+                : $"{stillDifferent.Count} file(s) differ after writing: {string.Join(", ", stillDifferent.Select(s => s.RelativePath))}");
+
+        _report.Outcome = _report.Steps.Any(s => s.Status == StepStatus.Failed) ? "Completed with errors."
+            : stagedCore is not null ? "SD card updated. Finish the core install on the MEGA65."
+            : "Completed.";
+    }
+
+    internal async Task<ReleaseCandidate?> FindReleaseAsync(HardwareModel model, CancellationToken ct)
+    {
+        var target = HardwareModels.ReleaseTarget(model);
+        if (target is null) return null;
+        if (catalogue.Current is null) await catalogue.LoadAsync(ct: ct);
+
+        var file = catalogue.Search(new CatalogueQuery(OfficialOnly: true))
+            .Where(OfficialReleases.IsStableCorePackage)
+            .FirstOrDefault(f => OfficialReleases.TargetFromTitle(f.Title) == target);
+        if (file is null) return null;
+
+        var versions = await catalogue.GetVersionsAsync(file.FileId, ct: ct);
+        return versions
+            .Where(v => v.IsActive)
+            .Select(v => (v, info: ReleaseInfo.TryParse(v.FileName, v.Comment)))
+            .Where(x => x.info is not null && !x.info.IncludesRom)
+            .OrderByDescending(x => x.info!.Release)
+            .Select(x => new ReleaseCandidate(file, x.v, x.info!))
+            .FirstOrDefault();
+    }
+
+    /// <summary>
+    /// The monitor's "build GIT:" line and the package file names both embed the commit hash,
+    /// so the core counts as current when the running build string contains the release hash.
+    /// </summary>
+    internal static CoreComparison CompareCore(DeviceState device, ReleaseInfo release)
+    {
+        if (string.IsNullOrWhiteSpace(device.CoreBuild) || release.CommitHash is null) return CoreComparison.InstalledUnknown;
+        return device.CoreBuild.Contains(release.CommitHash, StringComparison.OrdinalIgnoreCase)
+            ? CoreComparison.UpToDate : CoreComparison.UpdateAvailable;
+    }
+
+    internal static string? SelectCore(ReleasePackage package, HardwareModel model)
+    {
+        var prefix = HardwareModels.CorePrefix(model);
+        if (prefix is null) return null;
+        return package.CoreFiles
+            .Where(f => Path.GetExtension(f).Equals(".cor", StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefault(f => Path.GetFileName(f).StartsWith(prefix + "-", StringComparison.OrdinalIgnoreCase)
+                              || Path.GetFileName(f).StartsWith(prefix + ".", StringComparison.OrdinalIgnoreCase)
+                              || Path.GetFileName(f).StartsWith(prefix + "_", StringComparison.OrdinalIgnoreCase));
+    }
+
+    internal static string GuidedFlashInstructions(HardwareModel model, string coreFile) =>
+        $"""
+        Install the core on your MEGA65 {model} with MEGAFLASH:
+          1. Eject the SD card safely and put it back into the MEGA65's internal slot.
+          2. Switch the MEGA65 off. Hold NO SCROLL and switch it on to open MEGAFLASH.
+          3. Choose slot 1 (never slot 0, the factory core), then select {coreFile}.
+          4. Confirm the flash and wait. Do not switch off while it runs.
+          5. Power-cycle, then run Update My MEGA65 again over USB/JTAG to confirm the new core.
+        {(HardwareModels.SupportsPcFlashing(model)
+            ? "Your board could also be flashed from the PC with mega65_ftp and Vivado. That path has not been verified on hardware, so it is not offered here."
+            : "The official tools cannot flash this model from a PC, so this step must be done on the machine.")}
+        See the Filehost article "How to flash a core (Release 0.96 and later)".
+        """;
+
+    private void Set(int n, StepStatus status, string detail)
+    {
+        var rec = new StepRecord(n, StepTitles[n - 1], status, detail);
+        var i = _report.Steps.FindIndex(s => s.Number == n);
+        if (i >= 0) _report.Steps[i] = rec; else _report.Steps.Add(rec);
+        StepChanged?.Invoke(rec);
+    }
+
+    private async Task<string> SaveReportAsync(UpdateReport report, CancellationToken ct)
+    {
+        var stem = Path.Combine(paths.Reports, $"update-{report.Started:yyyyMMdd-HHmmss}");
+        var json = JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } });
+        await File.WriteAllTextAsync(stem + ".json", json, ct);
+        await File.WriteAllTextAsync(stem + ".md", ToMarkdown(report), ct);
+        return stem + ".md";
+    }
+
+    public static string ToMarkdown(UpdateReport r)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# Update My MEGA65 report").AppendLine();
+        sb.AppendLine($"- Started: {r.Started:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($"- Finished: {r.Finished:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($"- Model: {r.Model}");
+        if (r.Release is { } rel) sb.AppendLine($"- Release: {rel.Info.Release} ({rel.Version.FileName}, sha256 {r.DownloadSha256 ?? "not downloaded"})");
+        sb.AppendLine($"- Outcome: {r.Outcome}").AppendLine();
+        sb.AppendLine("| # | Step | Status | Detail |").AppendLine("|---|---|---|---|");
+        foreach (var s in r.Steps.OrderBy(s => s.Number))
+            sb.AppendLine($"| {s.Number} | {s.Title} | {s.Status} | {s.Detail.Replace("\r", "").Replace("\n", "<br>").Replace("|", "\\|")} |");
+        if (r.SdSync is { } sync)
+        {
+            sb.AppendLine().AppendLine("## SD-card changes").AppendLine();
+            foreach (var x in sync.Results)
+                sb.AppendLine($"- {x.Outcome}: {x.Item.RelativePath} ({x.Item.Action}){(x.BackupPath is null ? "" : $", backup: {x.BackupPath}")}{(x.Message is null ? "" : $", {x.Message}")}");
+        }
+        return sb.ToString();
+    }
+}

@@ -1,0 +1,34 @@
+<Window x:Class="Mega65Gui.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MEGA65 GUI" Width="1200" Height="800" MinWidth="900" MinHeight="600"
+        Background="{DynamicResource ApplicationBackgroundBrush}">
+    <DockPanel>
+        <!-- MEGA65 rainbow stripe -->
+        <UniformGrid DockPanel.Dock="Top" Rows="1" Height="4">
+            <Rectangle Fill="#E4002B"/><Rectangle Fill="#FF8200"/><Rectangle Fill="#FFCD00"/><Rectangle Fill="#00A651"/><Rectangle Fill="#0072CE"/>
+        </UniformGrid>
+        <Border DockPanel.Dock="Left" Width="220" Background="{DynamicResource LayerFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="16,18,16,14">
+                    <TextBlock Text="MEGA65" FontSize="22" FontWeight="Bold"/>
+                    <TextBlock Text="Maintain · Update · Use" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                </StackPanel>
+                <ListBox ItemsSource="{Binding Pages}" SelectedItem="{Binding Selected}" BorderThickness="0" Background="Transparent" Margin="6,0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="4,6">
+                                <TextBlock Text="{Binding Glyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16" Width="28" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Title}" FontSize="14" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+        <Grid>
+            <ContentControl Content="{Binding Selected}" Margin="24,16,24,8"/>
+        </Grid>
+    </DockPanel>
+</Window>

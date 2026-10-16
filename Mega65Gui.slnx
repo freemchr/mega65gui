@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Mega65Gui.App/Mega65Gui.App.csproj" />
+    <Project Path="src/Mega65Gui.Core/Mega65Gui.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Mega65Gui.Core.Tests/Mega65Gui.Core.Tests.csproj" />
+  </Folder>
+</Solution>

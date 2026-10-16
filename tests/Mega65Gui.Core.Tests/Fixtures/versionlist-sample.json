@@ -1,0 +1,68 @@
+[
+ {
+  "fileid": "13e1ce8a-ed5b-4046-aea6-491323697ead",
+  "version": "200.0",
+  "versionid": "30bf4da6-70b3-4874-bcfe-c5cfc66d8578",
+  "filename": "mega65-core-dev-build.7z",
+  "size": "597",
+  "comment": "Empty package with a reminder that new builds are only on builder.mega65.org",
+  "published": "19 Oct 2024",
+  "active": "Y",
+  "location": "../files/m/mega65-core-dev-build_kV0BAC.7z"
+ },
+ {
+  "fileid": "c812d019-74b6-4017-ad8e-b19451c906b0",
+  "version": "200.0",
+  "versionid": "70d279a8-2441-45bf-81a1-9164334062c8",
+  "filename": "mega65-core-dev-build.7z",
+  "size": "597",
+  "comment": "Empty package with a reminder that new builds are only on builder.mega65.org",
+  "published": "19 Oct 2024",
+  "active": "Y",
+  "location": "../files/m/mega65-core-dev-build_mXhzwe.7z"
+ },
+ {
+  "fileid": "d3b85941-4dc8-4010-a0e7-01459b66e933",
+  "version": "199.0",
+  "versionid": "843db998-64c9-4bbc-8888-e9e2468d9d95",
+  "filename": "mega65-core-dev-build.7z",
+  "size": "597",
+  "comment": "Empty package with a reminder that new builds are only on builder.mega65.org",
+  "published": "19 Oct 2024",
+  "active": "Y",
+  "location": "../files/m/mega65-core-dev-build_qnQs2T.7z"
+ },
+ {
+  "fileid": "13e1ce8a-ed5b-4046-aea6-491323697ead",
+  "version": "199.0",
+  "versionid": "aa5a00a4-2100-427c-b279-1ec3a273f1f7",
+  "filename": "mega65r3-dev-199-3253c5d.7z",
+  "size": "5007750",
+  "comment": "Jenkins Build 199 of development@3253c5d: fix: make build version consistent",
+  "published": "17 Jul 2022",
+  "active": "N",
+  "location": "../files/m/mega65r3-dev-199-3253c5d_EoZhL5.7z"
+ },
+ {
+  "fileid": "c812d019-74b6-4017-ad8e-b19451c906b0",
+  "version": "199.0",
+  "versionid": "793e6b2c-3f5d-4b2f-aab7-e9cf76d043af",
+  "filename": "nexys4ddr-dev-199-3253c5d.7z",
+  "size": "3996847",
+  "comment": "Jenkins Build 199 of development@3253c5d: fix: make build version consistent",
+  "published": "17 Jul 2022",
+  "active": "N",
+  "location": "../files/n/nexys4ddr-dev-199-3253c5d_55egSB.7z"
+ },
+ {
+  "fileid": "463392bc-1d4c-42d4-b124-7123db828ec6",
+  "version": "199.0",
+  "versionid": "ad3c0144-930b-4f9c-9004-a2adafd692c2",
+  "filename": "mega65-core-dev-build.7z",
+  "size": "597",
+  "comment": "No new builds for nexys, we only do nexys4ddr-widget!",
+  "published": "19 Oct 2024",
+  "active": "Y",
+  "location": "../files/m/mega65-core-dev-build_m0JMa4.7z"
+ }
+]
