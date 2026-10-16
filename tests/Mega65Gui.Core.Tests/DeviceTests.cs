@@ -50,7 +50,16 @@ public class DeviceTests
         Assert.Equal(["-i", "fe80::1%eth0", "-5", "-r", "game.prg"], args);
         Assert.Equal(["-l", "COM5", "-s", "2000000", "-Sshot.png"], Mega65Commands.ScreenshotArgs(com, "shot.png").Args);
         Assert.Throws<NotSupportedException>(() => Mega65Commands.ScreenshotArgs(eth, "x.png"));
-        Assert.Equal(["-F", "-y", "-e", "-i", "fe80::1%eth0", "-c", "dir", "-c", "quit"], Mega65Commands.FtpArgs(eth, "dir").Args);
+        Assert.Equal(["-F", "-y", "-e", "-i", "fe80::1%eth0", "-c", "dir", "-c", "exit"], Mega65Commands.FtpArgs(eth, true, "dir").Args);
+        // The 1.00 release has no -y option.
+        Assert.Equal(["-F", "-l", "COM5", "-s", "2000000", "-c", "dir", "-c", "exit"], Mega65Commands.FtpArgs(com, false, "dir").Args);
+    }
+
+    [Fact]
+    public void DetectsYesOptionFromHelpText()
+    {
+        Assert.True(Mega65Commands.HelpListsYesOption("  -c - execute command\n  -y - don't ask for confirmation before executing commands.\n"));
+        Assert.False(Mega65Commands.HelpListsYesOption("  -c - execute mega65_ftp cli command\n       Note: if you don't specify 'exit'\n"));
     }
 
     [Fact]

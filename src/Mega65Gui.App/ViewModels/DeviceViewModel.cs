@@ -98,7 +98,15 @@ public sealed partial class DeviceViewModel : PageViewModel
         IsConnected = true;
         (System.Windows.Application.Current.MainWindow?.DataContext as MainViewModel)?.Shell.Refresh();
         ConnectionText = target.ToString();
-        DeviceText = target.Kind == ConnectionKind.Ethernet
+        DeviceText = services.Device.NoResponse
+            ? $"The MEGA65 did not answer on {target.Address}. The port opened, but nothing came back.\n\n" +
+              "Check that:\n" +
+              " • the MEGA65 is switched on and showing its normal screen (not MEGAFLASH or a black screen);\n" +
+              " • the JTAG adapter is firmly seated on the MEGA65's JTAG header and its USB cable is a data cable;\n" +
+              " • no other program (M65Connect, a terminal, another m65) is using the port;\n" +
+              " • the adapter's DIP switches are set as described in the MEGA65 User's Guide.\n" +
+              "Then press Connect again."
+            : target.Kind == ConnectionKind.Ethernet
             ? "Connected over Ethernet. Model and core cannot be read over Ethernet with the official tools."
             : $"Model: {state.Model} ({state.ModelSource})\nCore: {state.CoreBuild ?? "not read"}\nROM: {state.RomVersion ?? "not read"}\n\n" +
               "These values are read through the serial monitor. This readout has not yet been verified on every hardware revision.";

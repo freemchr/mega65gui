@@ -22,6 +22,8 @@ public sealed class ProcessRunner : IProcessRunner
     {
         var psi = new ProcessStartInfo(fileName)
         {
+            // Tools must never wait for keyboard input; stdin is redirected and closed at once.
+            RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -37,6 +39,7 @@ public sealed class ProcessRunner : IProcessRunner
 
         var sw = Stopwatch.StartNew();
         proc.Start();
+        proc.StandardInput.Close();
         proc.BeginOutputReadLine();
         proc.BeginErrorReadLine();
 

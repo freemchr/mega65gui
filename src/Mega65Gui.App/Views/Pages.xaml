@@ -321,7 +321,11 @@
                             <Button Grid.Column="1" Content="Run" Command="{Binding RunSdCommandCommand}"/>
                         </Grid>
                         <Border CornerRadius="4" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}" Padding="6">
-                            <ListBox ItemsSource="{Binding Output}" FontFamily="Cascadia Mono, Consolas" FontSize="12" BorderThickness="0" Background="Transparent">
+                            <ListBox ItemsSource="{Binding Output}" FontFamily="Cascadia Mono, Consolas" FontSize="12" BorderThickness="0" Background="Transparent"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap"/></DataTemplate>
+                                </ListBox.ItemTemplate>
                                 <ListBox.ItemContainerStyle>
                                     <Style TargetType="ListBoxItem">
                                         <Setter Property="Padding" Value="2,0"/>

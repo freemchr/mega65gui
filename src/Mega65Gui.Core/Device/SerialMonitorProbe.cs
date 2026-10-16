@@ -23,7 +23,10 @@ public sealed partial class SerialMonitorProbe
     {
         using var port = new SerialPort(comPort, BaudRate, Parity.None, 8, StopBits.One)
         {
-            Handshake = Handshake.RequestToSend,
+            // Same line settings as mega65-tools on Windows: DTR and RTS on, no flow control.
+            Handshake = Handshake.None,
+            DtrEnable = true,
+            RtsEnable = true,
             ReadTimeout = 500,
             WriteTimeout = 1000,
             NewLine = "\r",

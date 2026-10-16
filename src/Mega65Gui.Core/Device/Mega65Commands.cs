@@ -47,17 +47,37 @@ public sealed class Mega65Commands(ToolInstallation tools, IProcessRunner runner
         ? ("m65", [.. SerialArgs(t), "-S" + pngPath])
         : throw new NotSupportedException("Screenshots are only available over USB/JTAG.");
 
-    public static (string Tool, List<string> Args) FtpArgs(ConnectionTarget t, params string[] commands)
+    /// <summary>
+    /// mega65_ftp arguments. "-y" (skip confirmation prompts) only exists in newer builds; the
+    /// 1.00 release rejects it and prints its usage, so it is only passed when supported.
+    /// "exit" as the last command unloads the helper from the MEGA65's memory.
+    /// </summary>
+    public static (string Tool, List<string> Args) FtpArgs(ConnectionTarget t, bool supportsYes, params string[] commands)
     {
         List<string> args = t.Kind switch
         {
-            ConnectionKind.Serial => ["-F", "-y", .. SerialArgs(t)],
-            ConnectionKind.Ethernet => ["-F", "-y", "-e", "-i", t.Address],
+            ConnectionKind.Serial => ["-F", .. SerialArgs(t)],
+            ConnectionKind.Ethernet => ["-F", "-e", "-i", t.Address],
             _ => throw new InvalidOperationException("Not connected."),
         };
+        if (supportsYes) args.Insert(1, "-y");
         foreach (var c in commands) { args.Add("-c"); args.Add(c); }
-        args.Add("-c"); args.Add("quit");
+        args.Add("-c"); args.Add("exit");
         return ("mega65_ftp", args);
+    }
+
+    /// <summary>True when the help text lists the "-y" option.</summary>
+    public static bool HelpListsYesOption(string helpText) =>
+        helpText.Split('\n').Any(l => l.TrimStart().StartsWith("-y ", StringComparison.Ordinal));
+
+    private bool? _ftpSupportsYes;
+
+    private async Task<bool> FtpSupportsYesAsync(CancellationToken ct)
+    {
+        if (_ftpSupportsYes is { } known) return known;
+        var exe = tools.PathOf("mega65_ftp") ?? throw new FileNotFoundException("mega65_ftp is not installed.");
+        var help = await runner.RunAsync(exe, ["-h"], TimeSpan.FromSeconds(10), null, ct);
+        return (_ftpSupportsYes = HelpListsYesOption(help.StdOut + help.StdErr)).Value;
     }
 
     // ---- execution ----
@@ -67,8 +87,8 @@ public sealed class Mega65Commands(ToolInstallation tools, IProcessRunner runner
     public Task<ProcessResult> SendPrgAsync(ConnectionTarget t, string prg, bool run, bool c64, CancellationToken ct = default) => Run(SendPrgArgs(t, prg, run, c64), Long, ct);
     public Task<ProcessResult> ScreenshotAsync(ConnectionTarget t, string png, CancellationToken ct = default) => Run(ScreenshotArgs(t, png), Short, ct);
 
-    public Task<ProcessResult> RemoteSdAsync(ConnectionTarget t, IProgress<string>? output, CancellationToken ct, params string[] commands) =>
-        Run(FtpArgs(t, commands), Long, ct, output);
+    public async Task<ProcessResult> RemoteSdAsync(ConnectionTarget t, IProgress<string>? output, CancellationToken ct, params string[] commands) =>
+        await Run(FtpArgs(t, await FtpSupportsYesAsync(ct), commands), Long, ct, output);
 
     /// <summary>Discovers MEGA65s on the LAN that have the Ethernet loader enabled (SHIFT+£).</summary>
     public async Task<IReadOnlyList<string>> DiscoverEthernetAsync(CancellationToken ct = default)

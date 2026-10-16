@@ -75,4 +75,7 @@ public sealed record DeviceState(
     string? RawMonitorText)
 {
     public static DeviceState Unknown { get; } = new(null, HardwareModel.Unknown, Provenance.NotKnown, null, null, null, null);
+
+    /// <summary>True when a serial probe got no bytes back at all (machine off, cable or adapter problem).</summary>
+    public bool NoResponse => Connection?.Kind == ConnectionKind.Serial && string.IsNullOrWhiteSpace(RawMonitorText);
 }
