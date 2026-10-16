@@ -372,6 +372,8 @@
                                     <ComboBox Grid.Column="1" ItemsSource="{Binding Slots}" SelectedItem="{Binding SelectedSlot}" Margin="0,0,6,0"/>
                                     <Button Grid.Column="2" Content="Start slot" Command="{Binding BootSlotCommand}" ToolTip="Restart the FPGA from a core already in flash (nothing is written)"/>
                                 </Grid>
+                                <Button Content="Run hardware self-test" Command="{Binding SelfTestCommand}" HorizontalAlignment="Left" Margin="0,0,0,10"
+                                        ToolTip="Checks reset, BASIC typing, remote keyboard, PRG, C64/MEGA65 modes and the SD card on your MEGA65"/>
                                 <TextBlock Text="PRG autoload" Style="{StaticResource SectionTitle}" Margin="0,4,0,4"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>

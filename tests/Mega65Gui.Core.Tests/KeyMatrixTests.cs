@@ -23,3 +23,17 @@ public class KeyMatrixTests
         Assert.Equal(("sffd3615 01 7f 7f\r", "sffd3615 7f 7f 7f\r"), KeyMatrix.Commands(0x01, 0x7F));
     }
 }
+
+public class SelfTestProgramTests
+{
+    [Fact]
+    public void BuildsAValidBasic65Program()
+    {
+        var prg = HardwareSelfTest.BasicPrintPrg("HI");
+        Assert.Equal(new byte[] { 0x01, 0x20 }, prg[..2]);            // load address $2001
+        var next = prg[2] | prg[3] << 8;
+        Assert.Equal(0x2001 + prg.Length - 2 - 2, next);              // link points at the end-of-program marker
+        Assert.Equal(0x99, prg[6]);                                   // PRINT token
+        Assert.Equal(new byte[] { 0, 0, 0 }, prg[^3..]);              // end of line, end of program
+    }
+}

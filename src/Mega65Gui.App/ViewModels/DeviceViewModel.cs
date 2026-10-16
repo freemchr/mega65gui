@@ -161,6 +161,25 @@ public sealed partial class DeviceViewModel : PageViewModel
               "This is the core running right now. If the MEGA65 started from the factory core (slot 0), slot 1 may hold a newer one; MEGAFLASH shows each slot.";
     }
 
+    [RelayCommand]
+    private Task SelfTestAsync()
+    {
+        if (services.Connection is not { Kind: ConnectionKind.Serial } c) { Status = "Connect over USB/JTAG first."; return Task.CompletedTask; }
+        if (!Confirm("Hardware self-test",
+                "Run the self-test on your MEGA65?\n\nIt resets the MEGA65 several times, types and runs small BASIC programs (anything in memory is lost), " +
+                "switches to C64 mode and back, and creates then deletes a folder M65GTEST on the SD card. It takes about two minutes."))
+            return Task.CompletedTask;
+        return GuardAsync(async () =>
+        {
+            await services.ReleasePortAsync();
+            Output.Clear();
+            var progress = new Progress<SelfTestResult>(r => Output.Add($"{(r.Passed ? "PASS" : "FAIL")}  {r.Name}  ({r.Detail})"));
+            var results = await new HardwareSelfTest(services.Tools.Current ?? throw new InvalidOperationException("Install the device tools first."),
+                services.Runner, c.Address).RunAsync(progress);
+            Status = $"Self-test: {results.Count(r => r.Passed)} passed, {results.Count(r => !r.Passed)} failed.";
+        }, "Running the hardware self-test…");
+    }
+
     [RelayCommand] private Task ResetAsync() => RunToolAsync((c, t) => c.ResetAsync(t), "Resetting…");
     [RelayCommand] private Task GoC64Async() => RunToolAsync((c, t) => c.SetModeAsync(t, MachineMode.C64), "Switching to C64 mode…");
     [RelayCommand] private Task GoMega65Async() => RunToolAsync((c, t) => c.SetModeAsync(t, MachineMode.Mega65), "Switching to MEGA65 mode…");

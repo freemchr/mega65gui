@@ -20,6 +20,14 @@ public partial class App : Application
             MessageBox.Show(args.Exception.Message, "MEGA65 GUI", MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
         };
+        // "--self-test COM3": run the hardware self-test without a window and write a report.
+        var st = Array.IndexOf(e.Args, "--self-test");
+        if (st >= 0)
+        {
+            await RunSelfTestAsync(st + 1 < e.Args.Length ? e.Args[st + 1] : "COM3");
+            return;
+        }
+
         var vm = new MainViewModel(new AppServices());
         var main = new MainWindow { DataContext = vm };
         MainWindow = main;
@@ -28,6 +36,26 @@ public partial class App : Application
         // Developer aid: "--render-pages <folder>" saves a PNG of every page and exits.
         var i = Array.IndexOf(e.Args, "--render-pages");
         if (i >= 0 && i + 1 < e.Args.Length) await RenderPagesAsync(main, vm, e.Args[i + 1]);
+    }
+
+    private async Task RunSelfTestAsync(string port)
+    {
+        var services = new AppServices();
+        var report = new System.Text.StringBuilder($"MEGA65 GUI hardware self-test on {port}, {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n\n");
+        var exitCode = 1;
+        try
+        {
+            var tools = services.Tools.Current ?? throw new InvalidOperationException("Device tools are not installed.");
+            var results = await new Mega65Gui.Core.Device.HardwareSelfTest(tools, services.Runner, port).RunAsync();
+            foreach (var r in results) report.AppendLine($"{(r.Passed ? "PASS" : "FAIL")}  {r.Name}  ({r.Detail})");
+            report.AppendLine($"\n{results.Count(r => r.Passed)} passed, {results.Count(r => !r.Passed)} failed");
+            exitCode = results.All(r => r.Passed) ? 0 : 1;
+        }
+        catch (Exception ex) { report.AppendLine("ERROR  " + ex.Message); }
+        var file = Path.Combine(services.Paths.Reports, $"selftest-{DateTime.Now:yyyyMMdd-HHmmss}.txt");
+        await File.WriteAllTextAsync(file, report.ToString());
+        await File.WriteAllTextAsync(Path.Combine(services.Paths.Reports, "selftest-latest.txt"), report.ToString());
+        Shutdown(exitCode);
     }
 
     private async Task RenderPagesAsync(Window window, MainViewModel vm, string folder)
