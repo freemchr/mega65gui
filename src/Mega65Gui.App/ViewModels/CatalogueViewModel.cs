@@ -64,12 +64,18 @@ public sealed partial class CatalogueViewModel : PageViewModel
     partial void OnOfficialOnlyChanged(bool value) => ApplyFilter();
     partial void OnSelectedFileChanged(FilehostFile? value)
     {
-        if (value is not null) _ = LoadDetailAsync(value.FileId);
+        if (value is not null && !_restoringSelection) _ = LoadDetailAsync(value.FileId);
     }
+
+    /// <summary>How old the list may be before opening the page fetches it again.</summary>
+    private static readonly TimeSpan AutoRefreshAfter = TimeSpan.FromMinutes(5);
 
     public override async Task OnShownAsync()
     {
+        // Show the cached list at once, then fetch the latest in the background if it is stale.
         if (!_loaded) await RefreshAsync(false);
+        var fetched = services.Catalogue.Current?.FetchedAt ?? DateTimeOffset.MinValue;
+        if (DateTimeOffset.Now - fetched > AutoRefreshAfter) await RefreshAsync(true);
     }
 
     [RelayCommand]
@@ -86,16 +92,27 @@ public sealed partial class CatalogueViewModel : PageViewModel
         OnPropertyChanged(nameof(Category));
         CacheInfo = snap.StaleReason is not null
             ? $"Offline – showing the copy from {snap.FetchedAt.LocalDateTime:g} ({snap.StaleReason})"
-            : $"{snap.Files.Count} files · {(snap.FromCache ? "cached" : "fetched")} {snap.FetchedAt.LocalDateTime:g}";
+            : $"{snap.Files.Count} files · updated {snap.FetchedAt.LocalDateTime:t}";
         ApplyFilter();
         Status = "";
-    }, "Loading catalogue…");
+    }, force ? "Checking the Filehost for new files…" : "Loading catalogue…");
+
+    private bool _restoringSelection;
 
     private void ApplyFilter()
     {
+        var selectedId = SelectedFile?.FileId;
         Results.Clear();
         var q = new CatalogueQuery(SearchText, Category == "All" ? null : Category, null, OfficialOnly);
         foreach (var f in services.Catalogue.Search(q)) Results.Add(f);
+
+        // Keep the highlighted row after a refresh without reloading its details.
+        if (selectedId is not null && Results.FirstOrDefault(f => f.FileId == selectedId) is { } again)
+        {
+            _restoringSelection = true;
+            SelectedFile = again;
+            _restoringSelection = false;
+        }
     }
 
     [RelayCommand]
