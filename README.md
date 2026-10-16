@@ -4,6 +4,8 @@ Created by **Chris Freeman**.
 
 [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/cjf077)
 
+**[Download the latest release](https://github.com/freemchr/mega65gui/releases/latest)**: unzip and run `Mega65Gui.exe` (Windows 10/11, 64-bit, nothing to install).
+
 A Windows application for maintaining, updating and using a [MEGA65](https://mega65.org).
 
 It brings together:
