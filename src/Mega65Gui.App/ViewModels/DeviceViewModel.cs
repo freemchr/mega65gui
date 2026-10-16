@@ -364,6 +364,6 @@ public sealed partial class DeviceViewModel : PageViewModel
         if (echo)
             foreach (var line in (r.StdOut + r.StdErr).Split('\n', StringSplitOptions.RemoveEmptyEntries).TakeLast(40))
                 Output.Add(line.TrimEnd());
-        Status = r.Succeeded ? "Done." : $"The tool exited with code {r.ExitCode}. See the output below.";
+        Status = r.Succeeded ? "Done." : ToolFailureHints.Explain(r.StdOut + r.StdErr) ?? $"The tool exited with code {r.ExitCode}. See the output below.";
     }, busy);
 }

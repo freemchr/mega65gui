@@ -42,7 +42,7 @@ public static class FeatureCatalog
         // Transfers
         new("Transfer", "PRG send and run", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "m65 -F [-4] [-r] / etherload -i [-r]", "Verified by the hardware self-test on an R6 2026-10-16"),
         new("Transfer", "SID send", FeatureStatus.Implemented, "USB/JTAG", "m65 -F -4 -r file.sid", "Verified on an R6 2026-10-16 (PSID v2, The Last Ninja): plays in C64 mode, keys 1-9 pick the song"),
-        new("Transfer", "BIT load (volatile)", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -q", "Lost at power-off; uses m65's built-in JTAG loader"),
+        new("Transfer", "BIT load (volatile)", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -q", "Lost at power-off; uses m65's built-in JTAG loader. Needs WinUSB on the adapter's Interface 0 on Windows; the app explains this when it is missing"),
         new("Transfer", "HIC (HICKUP) load", FeatureStatus.Implemented, "USB/JTAG", "m65 -F -k", "Verified by the extended hardware self-test on an R6 2026-10-16"),
         new("Transfer", "ROM load (volatile)", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "m65 -F -R / etherload -R", "Verified by the extended hardware self-test on an R6 2026-10-16"),
         new("Transfer", "BASIC program text transfer", FeatureStatus.Implemented, "USB/JTAG", "m65 -T - (stdin)", "Verified by the hardware self-test on an R6 2026-10-16"),
@@ -59,7 +59,7 @@ public static class FeatureCatalog
         new("Control", "Reset", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "m65 -F / etherload -5", "Verified by the hardware self-test on an R6 2026-10-16"),
         new("Control", "C64 / MEGA65 mode switching", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "m65 -F -4 / etherload --c64mode --m65mode", "Verified by the hardware self-test on an R6 2026-10-16"),
         new("Control", "Start a core from a flash slot", FeatureStatus.Implemented, "USB/JTAG", "m65 -Z", "Verified by the extended hardware self-test on an R6 2026-10-16"),
-        new("Control", "PAL / NTSC", FeatureStatus.HardwareUnverified, "USB/JTAG, Ethernet", "m65 -p/-n; etherload --pal/--ntsc", ""),
+        new("Control", "PAL / NTSC", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "m65 -p/-n; etherload --pal/--ntsc", "Verified over USB/JTAG on an R6 2026-10-16 ($D06F bit 7 set by -n, cleared by -p); Ethernet still to confirm"),
         new("Control", "Screenshot capture", FeatureStatus.Implemented, "USB/JTAG", "m65 -S<file>", "Verified by the extended hardware self-test on an R6 2026-10-16"),
         new("Control", "Remote keyboard", FeatureStatus.Implemented, "USB/JTAG", "Serial monitor sffd3615", "Verified by the hardware self-test on an R6 2026-10-16"),
         new("Control", "Monitor terminal", FeatureStatus.Implemented, "USB/JTAG", "Serial monitor, 2 Mbaud", "Verified by the extended hardware self-test on an R6 2026-10-16"),

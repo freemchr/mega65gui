@@ -61,7 +61,7 @@ The in-app **Features** page shows the same list from `src/Mega65Gui.Core/Featur
 | Control | Reset | Yes (J, E) | `m65 -F`, `etherload -5` | Implemented (verified by the hardware self-test on an R6) |
 | Control | C64 / MEGA65 mode switching | Yes (J, E) | `m65 -F -4`, `etherload --c64mode/--m65mode` | Implemented (verified by the hardware self-test on an R6) |
 | Control | Start a core from a flash slot | Via MEGAFLASH | `m65 -Z` | Implemented (verified by the hardware self-test on an R6) |
-| Control | PAL / NTSC | Yes | `m65 -p/-n`, `etherload --pal/--ntsc` | Hardware unverified |
+| Control | PAL / NTSC | Yes | `m65 -p/-n`, `etherload --pal/--ntsc` | Implemented (verified over USB/JTAG on an R6) |
 | Control | Screenshot capture | Yes (J) | `m65 -S<file>` | Implemented (verified by the hardware self-test on an R6) |
 | Control | Remote keyboard | Native | `m65 -T` (batch only) | Implemented (verified by the hardware self-test on an R6) |
 | Control | Monitor terminal | Native | `m65dbg` (not shipped for Windows) | Implemented (verified by the hardware self-test on an R6) |

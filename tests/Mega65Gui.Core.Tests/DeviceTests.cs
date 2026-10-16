@@ -123,4 +123,14 @@ public class DeviceTests
         Assert.Equal("20261005.14-develo-44c63d2", ToolManager.ParseVersion("m65 - usage\nVersion: 20261005.14-develo-44c63d2\n"));
         Assert.Null(ToolManager.ParseVersion("no version here"));
     }
+
+    [Fact]
+    public void Explains_missing_WinUSB_driver_for_bitstream_loading()
+    {
+        // Real m65 output on Windows without WinUSB on interface 0 (R6, 2026-10-16).
+        const string output = "NOTE please check USB driver for Serial Converter A / Interface 0: needs to be WinUSB!\n" +
+                              "CRIT you supplied a bitstream for a different MEGA65 model than is connected\n";
+        Assert.Contains("WinUSB", ToolFailureHints.Explain(output));
+        Assert.Null(ToolFailureHints.Explain("NOTE resetting MEGA65"));
+    }
 }
