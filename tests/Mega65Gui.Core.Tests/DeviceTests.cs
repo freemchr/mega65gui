@@ -18,6 +18,24 @@ public class DeviceTests
         Assert.Equal("V920375", state.RomVersion);
     }
 
+    /// <summary>Exact monitor responses captured from a MEGA65 R6 running core 0.96 (2026-10-16).</summary>
+    [Fact]
+    public void ParsesRealR6Responses()
+    {
+        var state = SerialMonitorProbe.Parse(
+            "h\r\nMEGA65 Serial Monitor\r\nbuild GIT: release-0.96,20240224.00,3c10488\r\n\r\n.",
+            "mffd3629 1\r\n:0FFD3629:06FF3FFFFFFFFFEF058348103C000000\r\n\r\n.",
+            "m20016 7\r\n:00020016:56393230333935A98004E304E48D7101\r\n\r\n.");
+        Assert.Equal(HardwareModel.R6, state.Model);
+        Assert.Equal("release-0.96,20240224.00,3c10488", state.CoreBuild);
+        Assert.Equal("3c10488", state.CoreGitHash);
+        Assert.Equal("V920395", state.RomVersion);
+
+        // Compared with the 0.97.2 release package, this core needs updating.
+        var release = Filehost.ReleaseInfo.TryParse("mega65r6-release-0.97.2-03b24c6-norom.7z")!;
+        Assert.Equal(Update.CoreComparison.UpdateAvailable, Update.UpdateEngine.CompareCore(state, release));
+    }
+
     [Fact]
     public void UnknownResponsesStayUnknown()
     {

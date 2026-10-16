@@ -15,7 +15,7 @@
 
 Each item needs a real MEGA65, and its findings go back into `FeatureCatalog`.
 
-1. Confirm the serial monitor responses (`h`, `mffd3629 1`, `m20016 7`) on an R3 and an R6.
+1. ~~Confirm the serial monitor responses on an R6~~ (done 2026-10-16). Still to confirm on an R3.
 2. Confirm that m65 PRG send, reset, mode switch and screenshot work with `-l COMx -s 2000000` on Windows.
 3. Confirm `etherload -D` and the mega65_ftp `-e` console on core 0.97.x.
 4. Confirm the contiguity checker on a freshly formatted card and on a fragmented one.

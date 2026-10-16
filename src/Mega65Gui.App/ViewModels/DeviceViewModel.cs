@@ -108,8 +108,8 @@ public sealed partial class DeviceViewModel : PageViewModel
               "Then press Connect again."
             : target.Kind == ConnectionKind.Ethernet
             ? "Connected over Ethernet. Model and core cannot be read over Ethernet with the official tools."
-            : $"Model: {state.Model} ({state.ModelSource})\nCore: {state.CoreBuild ?? "not read"}\nROM: {state.RomVersion ?? "not read"}\n\n" +
-              "These values are read through the serial monitor. This readout has not yet been verified on every hardware revision.";
+            : $"Model: {state.Model} ({state.ModelSource})\nRunning core: {state.CoreBuild ?? "not read"}\nROM: {state.RomVersion ?? "not read"}\n\n" +
+              "This is the core running right now. If the MEGA65 started from the factory core (slot 0), slot 1 may hold a newer one; MEGAFLASH shows each slot.";
         Status = "";
     }
 

@@ -34,8 +34,8 @@ public static class FeatureCatalog
         new("Tools", "Install official mega65-tools from the Filehost", FeatureStatus.Implemented, "Internet", "Filehost release/dev packages", "GPL-3.0 tools run as separate processes"),
 
         // Connectivity
-        new("Connection", "USB/JTAG serial connection", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -l COMx -s 2000000", "Windows m65 needs the port passed explicitly"),
-        new("Connection", "Device state readout (model, core, ROM)", FeatureStatus.HardwareUnverified, "USB/JTAG", "Serial monitor: h, mffd3629, m20016", "Clean-room implementation"),
+        new("Connection", "USB/JTAG serial connection", FeatureStatus.Implemented, "USB/JTAG", "m65 -l COMx -s 2000000", "Verified on an R6 (TE0790 adapter, COM3) 2026-10-16. The MEGA65 must be running its core, not the ROM selection screen"),
+        new("Connection", "Device state readout (model, core, ROM)", FeatureStatus.Implemented, "USB/JTAG", "Serial monitor: h, mffd3629, m20016", "Verified on an R6 running core 0.96 2026-10-16; real responses kept as a test"),
         new("Connection", "Ethernet discovery and connection", FeatureStatus.HardwareUnverified, "Ethernet", "etherload -D", "Core 0.96+; SHIFT+£ on the MEGA65"),
 
         // Transfers

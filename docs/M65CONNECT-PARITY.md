@@ -42,8 +42,8 @@ The in-app **Features** page shows the same list from `src/Mega65Gui.Core/Featur
 | Update | Update My MEGA65 (12-step guided workflow) | – | – | Implemented |
 | Update | Core flashing from the PC | – | `mega65_ftp flash`: R2/R3 + Vivado only; refuses R4–R6 and Ethernet | Not offered: guided MEGAFLASH |
 | Tools | Install official mega65-tools from the Filehost | Bundles binaries | – | Implemented |
-| Connection | USB/JTAG serial connection | COM port, FTDI D2XX | `m65 -l COMx -s 2000000` (on Windows `-l` is required) | Hardware unverified |
-| Connection | Device state readout (model, core, ROM) | Partial | Monitor `h`, `mffd3629 1`, `m20016` | Hardware unverified |
+| Connection | USB/JTAG serial connection | COM port, FTDI D2XX | `m65 -l COMx -s 2000000` (on Windows `-l` is required) | Implemented (verified on an R6) |
+| Connection | Device state readout (model, core, ROM) | Partial | Monitor `h`, `mffd3629 1`, `m20016` | Implemented (verified on an R6) |
 | Connection | Ethernet discovery and connection | `etherload -D` | `etherload -D`, `-i` | Hardware unverified |
 | Transfer | PRG send and run | Yes (J, E) | `m65 -F [-4] [-r] f.prg`, `etherload -i ip [-4/-5] [-r] f.prg` | Hardware unverified |
 | Transfer | SID send | Yes (J) | `m65 -F -4 -r f.sid` | Planned |
@@ -86,6 +86,12 @@ All taken from mega65-tools source.
   `m65common.c` has no names for R4–R6, so the app maps the byte itself.
 - **Core build:** the line after `build GIT: ` in the monitor `h` output. Release packages embed the same commit hash in their file names.
 - **ROM version:** 7 ASCII bytes at `$20016`.
+- **Real R6 responses (core 0.96, 2026-10-16):**
+  - `h` → `build GIT: release-0.96,20240224.00,3c10488`
+  - `mffd3629 1` → `:0FFD3629:06FF3F…` (model byte `$06` = R6)
+  - `m20016 7` → `:00020016:56393230333935…` (`V920395`)
+- **Note:** the monitor does not answer while the MEGA65 shows the ROM selection screen. It must be running its core normally.
+- **Running core, not slot contents:** `h` reports the core running now. That capture was the factory core in slot 0; slot 1 held a newer core. MEGAFLASH shows what each slot contains.
 - **Core flashing:**
   - `mega65_ftp` refuses R4–R6 ("Please use MEGAFLASH on the device instead").
   - R2/R3 need Vivado.

@@ -137,7 +137,9 @@ public sealed class UpdateEngine(
             .AppendLine(_report.Core switch
             {
                 CoreComparison.UpToDate => "The running core already matches this release.",
-                CoreComparison.UpdateAvailable => "A different core is available.",
+                CoreComparison.UpdateAvailable =>
+                    "The running core is different from this release. Note: this is the core running right now. "
+                    + "If the MEGA65 started from the factory core (slot 0) and slot 1 already holds this release, there is nothing to flash.",
                 _ => "The installed core could not be read, so the SD card will be compared file by file.",
             })
             .AppendLine()
@@ -328,9 +330,10 @@ public sealed class UpdateEngine(
         Install the core on your MEGA65 {model} with MEGAFLASH:
           1. Eject the SD card safely and put it back into the MEGA65's internal slot.
           2. Switch the MEGA65 off. Hold NO SCROLL and switch it on to open MEGAFLASH.
-          3. Choose slot 1 (never slot 0, the factory core), then select {coreFile}.
-          4. Confirm the flash and wait. Do not switch off while it runs.
-          5. Power-cycle, then run Update My MEGA65 again over USB/JTAG to confirm the new core.
+          3. MEGAFLASH lists the core in each slot. If slot 1 already shows {coreFile}, there is nothing to flash: just start slot 1.
+          4. Otherwise choose slot 1 (never slot 0, the factory core), then select {coreFile}.
+          5. Confirm the flash and wait. Do not switch off while it runs.
+          6. Power-cycle, then run Update My MEGA65 again over USB/JTAG to confirm the new core is the one running.
         {(HardwareModels.SupportsPcFlashing(model)
             ? "Your board could also be flashed from the PC with mega65_ftp and Vivado. That path has not been verified on hardware, so it is not offered here."
             : "The official tools cannot flash this model from a PC, so this step must be done on the machine.")}
