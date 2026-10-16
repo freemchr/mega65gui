@@ -68,7 +68,9 @@ public sealed partial class ShellStatusViewModel : ObservableObject
         DeviceConnected = _services.Connection is not null;
         DeviceText = _services.Connection is { } c
             ? _services.Device.Model == Core.Device.HardwareModel.Unknown ? c.ToString() : $"MEGA65 {_services.Device.Model} · {c.Address}"
-            : "No device connected";
+            : _services.LostPort is { } lost ? $"Disconnected · {lost}" : "No device connected";
+        if (_services.Connection is { Kind: Core.Device.ConnectionKind.Serial } && _services.Device.NoResponse)
+            DeviceText = $"{_services.Connection.Address} · MEGA65 not answering";
 
         ToolsInstalled = _services.Tools.Current is not null;
         InstallingTools = _services.IsInstallingTools;

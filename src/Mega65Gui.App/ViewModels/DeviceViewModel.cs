@@ -18,6 +18,56 @@ public sealed partial class DeviceViewModel : PageViewModel
         this.services = services;
         services.ToolsChanged += () => System.Windows.Application.Current.Dispatcher.Invoke(UpdateTools);
         UpdateTools();
+
+        // Watch the COM port: the USB/JTAG adapter disappears from Windows when the MEGA65 is
+        // switched off or unplugged. Only the list of port names is checked; the port is not opened.
+        _watch = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _watch.Tick += async (_, _) => await WatchPortAsync();
+        _watch.Start();
+    }
+
+    private readonly System.Windows.Threading.DispatcherTimer _watch;
+    private string? _lostPort;
+    private DateTime _portBackAt;
+
+    private async Task WatchPortAsync()
+    {
+        var ports = SerialMonitorProbe.ListPorts();
+
+        if (services.Connection is { Kind: ConnectionKind.Serial } c && !ports.Contains(c.Address, StringComparer.OrdinalIgnoreCase))
+        {
+            _lostPort = c.Address;
+            services.LostPort = c.Address;
+            SetDisconnected($"Disconnected: {c.Address} has gone. The MEGA65 was switched off or its USB cable unplugged. " +
+                            "It reconnects automatically when it comes back.");
+            return;
+        }
+
+        if (_lostPort is null || IsBusy) return;
+        if (!ports.Contains(_lostPort, StringComparer.OrdinalIgnoreCase)) { _portBackAt = default; return; }
+
+        // Give the MEGA65 a few seconds to start its core before probing.
+        if (_portBackAt == default) { _portBackAt = DateTime.Now; ConnectionText = $"{_lostPort} is back. Waiting for the MEGA65 to start…"; return; }
+        if (DateTime.Now - _portBackAt < TimeSpan.FromSeconds(4)) return;
+
+        var port = _lostPort;
+        _lostPort = null;
+        _portBackAt = default;
+        RefreshPorts();
+        SelectedPort = port;
+        services.LostPort = null;
+        await ConnectSerialAsync();
+    }
+
+    private void SetDisconnected(string message)
+    {
+        services.Connection = null;
+        services.Device = DeviceState.Unknown;
+        IsConnected = false;
+        ConnectionText = "Disconnected";
+        DeviceText = message;
+        RefreshPorts();
+        (System.Windows.Application.Current.MainWindow?.DataContext as MainViewModel)?.Shell.Refresh();
     }
 
     [ObservableProperty] private bool _toolsMissing;
@@ -67,6 +117,8 @@ public sealed partial class DeviceViewModel : PageViewModel
     private Task ConnectSerialAsync() => GuardAsync(async () =>
     {
         if (SelectedPort is null) { Status = "Choose a COM port."; return; }
+        _lostPort = null;
+        services.LostPort = null;
         var target = ConnectionTarget.Serial(SelectedPort);
         var state = await Task.Run(() => new DeviceProbe().ProbeAsync(target));
         SetConnected(target, state);

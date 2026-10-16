@@ -45,6 +45,9 @@ public sealed class AppServices
     public ConnectionTarget? Connection { get; set; }
     public DeviceState Device { get; set; } = DeviceState.Unknown;
 
+    /// <summary>Serial port of a connection that dropped (MEGA65 off or unplugged); null otherwise.</summary>
+    public string? LostPort { get; set; }
+
     public Mega65Commands? Commands => Tools.Current is { } t ? new Mega65Commands(t, Runner) : null;
 
     /// <summary>Raised on the UI thread's caller when tools are installed, replaced or an install starts/ends.</summary>
