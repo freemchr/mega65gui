@@ -1,5 +1,7 @@
 # MEGA65 GUI
 
+Created by **Chris Freeman**.
+
 A Windows application for maintaining, updating and using a [MEGA65](https://mega65.org).
 
 It brings together:
@@ -63,3 +65,17 @@ Requires the .NET 10 SDK on Windows.
 dotnet test Mega65Gui.slnx
 dotnet run --project src/Mega65Gui.App
 ```
+
+## Support
+
+- **Report a problem or request a feature:** [GitHub Issues](https://github.com/freemchr/mega65gui/issues).
+- **Source and documentation:** https://github.com/freemchr/mega65gui
+
+## Credits
+
+- **The official [MEGA65 tools](https://github.com/MEGA65/mega65-tools)** (`m65`, `mega65_ftp`, `etherload`, `romdiff`) by the MEGA65 project, GPL-3.0. MEGA65 GUI downloads them from the Filehost and runs them as separate programs.
+- **The [MEGA65 Filehost](https://files.mega65.org):** releases, ROMs and software.
+- **[M65Connect](https://github.com/MEGA65/m65connect)'s documentation:** used as a feature reference. No M65Connect code is included.
+- **Libraries:** SharpCompress, CommunityToolkit.Mvvm and .NET (MIT).
+
+MEGA65 GUI is an independent project and is not an official MEGA65 product.

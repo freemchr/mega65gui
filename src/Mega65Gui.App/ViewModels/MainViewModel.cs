@@ -13,10 +13,11 @@ public sealed partial class MainViewModel : ObservableObject
         CardBrowser = new CardBrowserViewModel(services);
         DiskRomTools = new ToolsPageViewModel(services);
         Terminal = new TerminalViewModel(services);
+        About = new AboutViewModel();
         SdSync = new SdSyncViewModel(services);
         Tools = new ToolsViewModel(services);
         Features = new FeaturesViewModel();
-        Pages = [Update, Catalogue, Device, CardBrowser, Terminal, SdSync, DiskRomTools, Tools, Features];
+        Pages = [Update, Catalogue, Device, CardBrowser, Terminal, SdSync, DiskRomTools, Tools, Features, About];
         Shell = new ShellStatusViewModel(services)
         {
             Navigate = title => Selected = Pages.First(p => p.Title == title),
@@ -32,6 +33,7 @@ public sealed partial class MainViewModel : ObservableObject
     public CardBrowserViewModel CardBrowser { get; }
     public ToolsPageViewModel DiskRomTools { get; }
     public TerminalViewModel Terminal { get; }
+    public AboutViewModel About { get; }
     public SdSyncViewModel SdSync { get; }
     public ToolsViewModel Tools { get; }
     public FeaturesViewModel Features { get; }

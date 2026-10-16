@@ -589,6 +589,52 @@
         </DockPanel>
     </DataTemplate>
 
+    <!-- ================= About ================= -->
+    <DataTemplate DataType="{x:Type vm:AboutViewModel}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="720" HorizontalAlignment="Left">
+                <TextBlock Text="About MEGA65 GUI" Style="{StaticResource PageTitle}"/>
+                <TextBlock Style="{StaticResource PageSubtitle}">
+                    <Run Text="Version"/> <Run Text="{Binding Version, Mode=OneWay}"/>
+                </TextBlock>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Created by Chris Freeman" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                        <TextBlock TextWrapping="Wrap" Margin="0,0,0,10"
+                                   Text="A Windows app for maintaining, updating and using a MEGA65: Filehost downloads, guided updates, SD card management and device control."/>
+                        <TextBlock Text="Support and issues" Style="{StaticResource SectionTitle}"/>
+                        <Button Style="{StaticResource FlatRow}" Command="{Binding OpenCommand}" CommandParameter="https://github.com/freemchr/mega65gui/issues" HorizontalAlignment="Left" Padding="0">
+                        <TextBlock Text="Report a problem or request a feature (GitHub Issues)" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" TextDecorations="Underline"/>
+                    </Button>
+                        <Button Style="{StaticResource FlatRow}" Command="{Binding OpenCommand}" CommandParameter="https://github.com/freemchr/mega65gui" HorizontalAlignment="Left" Padding="0">
+                        <TextBlock Text="Source code and documentation: github.com/freemchr/mega65gui" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" TextDecorations="Underline"/>
+                    </Button>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Built with" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock TextWrapping="Wrap" Margin="0,0,0,8"
+                                   Text="The official MEGA65 tools (m65, mega65_ftp, etherload, romdiff) by the MEGA65 project, free software under the GNU GPL v3. MEGA65 GUI downloads them from the Filehost and runs them as separate programs."/>
+                        <Button Style="{StaticResource FlatRow}" Command="{Binding OpenCommand}" CommandParameter="https://github.com/MEGA65/mega65-tools" HorizontalAlignment="Left" Padding="0">
+                        <TextBlock Text="MEGA65 tools on GitHub" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" TextDecorations="Underline"/>
+                    </Button>
+                        <TextBlock TextWrapping="Wrap" Margin="0,8,0,8"
+                                   Text="Releases, ROMs and software come from the MEGA65 Filehost. M65Connect's documentation was used as a reference for features; no M65Connect code is included."/>
+                        <Button Style="{StaticResource FlatRow}" Command="{Binding OpenCommand}" CommandParameter="https://files.mega65.org" HorizontalAlignment="Left" Padding="0">
+                        <TextBlock Text="MEGA65 Filehost" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" TextDecorations="Underline"/>
+                    </Button>
+                        <Button Style="{StaticResource FlatRow}" Command="{Binding OpenCommand}" CommandParameter="https://mega65.org" HorizontalAlignment="Left" Padding="0">
+                        <TextBlock Text="MEGA65 project" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" TextDecorations="Underline"/>
+                    </Button>
+                        <TextBlock TextWrapping="Wrap" Margin="0,8,0,0" Style="{StaticResource Muted}"
+                                   Text="Also uses SharpCompress, CommunityToolkit.Mvvm and .NET (MIT licence). MEGA65 GUI is an independent project and is not an official MEGA65 product."/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </DataTemplate>
+
     <!-- ================= Tools ================= -->
     <DataTemplate DataType="{x:Type vm:ToolsViewModel}">
         <StackPanel>
