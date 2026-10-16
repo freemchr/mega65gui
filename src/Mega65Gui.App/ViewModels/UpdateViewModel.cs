@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Mega65Gui.App.Services;
 using Mega65Gui.Core.Device;
+using Mega65Gui.Core.Sd;
 using Mega65Gui.Core.Update;
 using Microsoft.Win32;
 
@@ -43,13 +44,23 @@ public sealed partial class UpdateViewModel(AppServices services, IApprovalGate 
     [ObservableProperty] private string _sdCardPath = "";
     [ObservableProperty] private ModelChoice? _selectedModel;
     [ObservableProperty] private bool _includeRom;
+    /// <summary>True: update the card inside the MEGA65 over the current connection. False: a card in a PC reader.</summary>
+    [ObservableProperty] private bool _cardInDevice;
+    [ObservableProperty] private bool _isConnected;
 
     [ObservableProperty] private string? _reportPath;
     [ObservableProperty] private string _connectionText = "Not connected";
 
+    private bool _cardChoiceMade;
+
+    partial void OnCardInDeviceChanged(bool value) => _cardChoiceMade = true;
+
     public override Task OnShownAsync()
     {
         SelectedModel ??= ModelChoices[0];
+        IsConnected = services.Connection is not null;
+        // Default to the card inside the MEGA65 whenever one is connected, until the user chooses.
+        if (!_cardChoiceMade) { CardInDevice = IsConnected; _cardChoiceMade = false; }
         ConnectionText = services.Connection is { } c
             ? $"{c} – {services.Device.Model} ({services.Device.ModelSource})"
             : "Not connected. Connect on the Device page to read the model and core automatically, or choose the model below.";
@@ -66,7 +77,12 @@ public sealed partial class UpdateViewModel(AppServices services, IApprovalGate 
     [RelayCommand]
     private async Task RunAsync()
     {
-        if (string.IsNullOrWhiteSpace(SdCardPath) || !Directory.Exists(SdCardPath))
+        if (CardInDevice)
+        {
+            if (services.Connection is null) { Status = "Connect to the MEGA65 on the Device page first, or choose a card in a PC reader."; return; }
+            if (services.Tools.Current is null) { Status = "Updating the card inside the MEGA65 needs the device tools. Install them from the sidebar."; return; }
+        }
+        else if (string.IsNullOrWhiteSpace(SdCardPath) || !Directory.Exists(SdCardPath))
         {
             Status = "Choose the SD card folder first.";
             return;
@@ -81,7 +97,8 @@ public sealed partial class UpdateViewModel(AppServices services, IApprovalGate 
         ReportPath = null;
         _cts = new CancellationTokenSource();
 
-        var engine = new UpdateEngine(services.Catalogue, services.Downloads, new DeviceProbe(), gate, services.Paths, services.Contiguity);
+        var engine = new UpdateEngine(services.Catalogue, services.Downloads, new DeviceProbe(), gate, services.Paths, services.Contiguity,
+            target => new Mega65FtpCard(services.Commands!, target));
         engine.StepChanged += rec => Application.Current.Dispatcher.Invoke(() =>
         {
             var row = Steps[rec.Number - 1];
@@ -92,7 +109,7 @@ public sealed partial class UpdateViewModel(AppServices services, IApprovalGate 
 
         await GuardAsync(async () =>
         {
-            var report = await Task.Run(() => engine.RunAsync(new UpdateOptions(SdCardPath, services.Connection, SelectedModel?.Model, IncludeRom), log, _cts.Token));
+            var report = await Task.Run(() => engine.RunAsync(new UpdateOptions(SdCardPath, services.Connection, SelectedModel?.Model, IncludeRom, CardInDevice), log, _cts.Token));
             ReportPath = report.Steps.FirstOrDefault(s => s.Number == 12)?.Detail;
             Status = report.Outcome ?? "";
         }, "Working…");

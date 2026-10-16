@@ -29,7 +29,8 @@ public static class FeatureCatalog
         new("Filehost", "Download with resume, size and SHA-256 manifest", FeatureStatus.Implemented, "Internet", "Static /files/ URLs with Range", "Filehost publishes no checksums; SHA-256 is recorded locally"),
         new("Filehost", "Sign in with your own Filehost account", FeatureStatus.Implemented, "Internet", "login.php session (as the website)", "Verified with a real account 2026-10-16. Optional DPAPI-encrypted saved password"),
         new("Filehost", "Owner-restricted (closed ROM) downloads", FeatureStatus.Implemented, "Internet", "Private link + readfiledetail under your session", "Server decides access; needs your redeemed ownership code. Verified with a real account and a with-ROM update 2026-10-16"),
-        new("Update", "Update My MEGA65 (12-step guided workflow)", FeatureStatus.Implemented, "USB/JTAG or SD only", "UpdateEngine", "Approval before every write; backups; report. Run against a real card copy (R6, with ROM) 2026-10-16"),
+        new("Update", "Update My MEGA65 (12-step guided workflow)", FeatureStatus.Implemented, "Card reader, USB/JTAG, Ethernet", "UpdateEngine", "Approval before every write; backups; report. Run against a real card copy (R6, with ROM) 2026-10-16"),
+        new("Update", "Update the SD card inside the MEGA65 (USB/JTAG or Ethernet)", FeatureStatus.HardwareUnverified, "USB/JTAG, Ethernet", "mega65_ftp dir/get/put", "Same steps done by hand over USB/JTAG on an R6 2026-10-16; the in-app flow and Ethernet still to confirm"),
         new("Update", "Core flashing from the PC", FeatureStatus.NotOffered, "-", "MEGAFLASH on device (guided)", "Official tools refuse R4-R6; R2/R3 need Vivado"),
         new("Tools", "Install official mega65-tools from the Filehost", FeatureStatus.Implemented, "Internet", "Filehost release/dev packages", "GPL-3.0 tools run as separate processes"),
 

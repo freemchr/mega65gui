@@ -8,11 +8,17 @@ public enum StepStatus { Pending, Running, Done, Skipped, NeedsUser, Failed }
 
 public sealed record StepRecord(int Number, string Title, StepStatus Status, string Detail);
 
+/// <summary>
+/// <paramref name="SdCardPath"/> is used when the card is in a PC card reader. With
+/// <paramref name="CardInDevice"/>, the card inside the MEGA65 is updated over
+/// <paramref name="Connection"/> (USB/JTAG or Ethernet) instead.
+/// </summary>
 public sealed record UpdateOptions(
     string SdCardPath,
     ConnectionTarget? Connection = null,
     HardwareModel? ModelOverride = null,
-    bool IncludeRom = false);
+    bool IncludeRom = false,
+    bool CardInDevice = false);
 
 /// <summary>The release selected for this machine and how it compares with what is installed.</summary>
 public sealed record ReleaseCandidate(FilehostFile File, FilehostVersionRow Version, ReleaseInfo Info);

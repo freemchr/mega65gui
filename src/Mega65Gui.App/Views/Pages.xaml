@@ -28,16 +28,35 @@
                         <ColumnDefinition Width="Auto"/><ColumnDefinition Width="230"/><ColumnDefinition Width="20"/>
                         <ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions><RowDefinition/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <Grid.RowDefinitions><RowDefinition/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <TextBlock Text="Model" Style="{StaticResource Label}"/>
                     <ComboBox Grid.Column="1" ItemsSource="{Binding ModelChoices}" SelectedItem="{Binding SelectedModel}" DisplayMemberPath="Label"/>
                     <TextBlock Grid.Column="3" Text="SD card" Style="{StaticResource Label}"/>
-                    <TextBox Grid.Column="4" Text="{Binding SdCardPath, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0"/>
-                    <Button Grid.Column="5" Content="Browse…" Command="{Binding BrowseSdCardCommand}"/>
+                    <StackPanel Grid.Column="4" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <RadioButton Content="In the MEGA65" IsChecked="{Binding CardInDevice}" Margin="0,0,16,0" MinWidth="0"
+                                     ToolTip="Update the card inside the MEGA65 over the USB/JTAG or Ethernet connection. The MEGA65 resets after each card operation."/>
+                        <RadioButton Content="In a PC card reader" IsChecked="{Binding CardInDevice, Converter={StaticResource Not}}" MinWidth="0"/>
+                    </StackPanel>
 
-                    <TextBlock Grid.Row="1" Grid.ColumnSpan="6" Text="{Binding ConnectionText}" Style="{StaticResource Muted}" Margin="0,8,0,0"/>
+                    <Grid Grid.Row="1" Grid.ColumnSpan="6" Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CardInDevice}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        <TextBox Text="{Binding SdCardPath, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0" ToolTip="The card's drive or a folder with a copy of it"/>
+                        <Button Grid.Column="1" Content="Browse…" Command="{Binding BrowseSdCardCommand}"/>
+                    </Grid>
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="6" Margin="0,8,0,0" Style="{StaticResource Muted}"
+                               Text="The card inside the MEGA65 is updated over the connection: its files are backed up to this PC first, only approved changes are uploaded, and every upload is read back and checked."
+                               Visibility="{Binding CardInDevice, Converter={StaticResource BoolToVisible}}"/>
 
-                    <DockPanel Grid.Row="2" Grid.ColumnSpan="6" Margin="0,10,0,0">
+                    <TextBlock Grid.Row="2" Grid.ColumnSpan="6" Text="{Binding ConnectionText}" Style="{StaticResource Muted}" Margin="0,8,0,0"/>
+
+                    <DockPanel Grid.Row="3" Grid.ColumnSpan="6" Margin="0,10,0,0">
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                             <Button Content="Open report" Command="{Binding OpenReportCommand}" Margin="0,0,6,0"
                                     Visibility="{Binding ReportPath, Converter={StaticResource NullToCollapsed}}"/>

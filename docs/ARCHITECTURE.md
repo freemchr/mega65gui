@@ -36,12 +36,12 @@ Everything is stored under `%LOCALAPPDATA%\Mega65Gui\`:
 | 3 | Compatible releases | Official stable package for the model's target, highest active release, no ROM |
 | 4 | Change summary | Running core compared with the release commit hash. **Approval gate** |
 | 5 | Download and validate | Resume, size check, SHA-256 manifest, extraction, package layout check |
-| 6 | Compare with the card | Size + SHA-256 per file, case-insensitive (FAT32) |
+| 6 | Compare with the card | Card in a PC reader: size + SHA-256 per file, case-insensitive (FAT32). Card in the MEGA65: the card's copies are downloaded with `mega65_ftp` (this is also the backup) and compared by SHA-256 |
 | 7 | Back up | Every file to be replaced is copied first |
 | 8 | Apply | **Approval gate** with per-file checkboxes. Each file is written to a temp file, hash-verified, then moved into place. Never deletes. D81 contiguity is checked |
 | 9 | Stage core | `.cor` for the exact model copied to the card root. **Approval gate** |
 | 10 | Install core | Guided MEGAFLASH steps: official tools cannot flash R4–R6, and R2/R3 need Vivado |
-| 11 | Verify | The card is re-compared and every written file must match |
+| 11 | Verify | The card is re-compared and every written file must match. Card in the MEGA65: every uploaded file is downloaded again and compared |
 | 12 | Report | Markdown + JSON, saved even after cancellation or failure |
 
 ## Safety rules

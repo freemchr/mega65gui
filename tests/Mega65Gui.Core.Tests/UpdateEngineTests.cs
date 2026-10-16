@@ -39,7 +39,7 @@ public sealed class UpdateEngineTests : IDisposable
         return ms.ToArray();
     }
 
-    private (UpdateEngine Engine, FakeGate Gate) Create(DeviceState device, bool approveAll = true)
+    private (UpdateEngine Engine, FakeGate Gate) Create(DeviceState device, bool approveAll = true, IRemoteCard? remoteCard = null)
     {
         var package = BuildPackage();
         var versions = JsonSerializer.Serialize(new[]
@@ -58,7 +58,7 @@ public sealed class UpdateEngineTests : IDisposable
         var paths = new AppPaths(Path.Combine(_root, "app"));
         var gate = new FakeGate(approveAll);
         var engine = new UpdateEngine(new CatalogueService(new FilehostClient(http), paths), new DownloadManager(http, paths),
-            new FakeProbe(device), gate, paths);
+            new FakeProbe(device), gate, paths, null, remoteCard is null ? null : _ => remoteCard);
         return (engine, gate);
     }
 
@@ -94,6 +94,37 @@ public sealed class UpdateEngineTests : IDisposable
         Assert.True(File.Exists(reportFile));
         Assert.DoesNotContain("| Running |", File.ReadAllText(reportFile));
         Assert.Equal(3, gate.Prompts); // summary, SD changes, core staging
+    }
+
+    [Fact]
+    public async Task UpdatesTheCardInsideTheMega65()
+    {
+        SeedCard();
+        var card = new RemoteCardTests.FolderCard(Card);
+        var device = DeviceState.Unknown with { Connection = ConnectionTarget.Serial("COM3"), Model = HardwareModel.R6, ModelSource = Provenance.ReadFromDevice, CoreBuild = "release-0.96,20240224.00,3c10488" };
+        var (engine, gate) = Create(device, remoteCard: card);
+
+        var report = await engine.RunAsync(new UpdateOptions("", ConnectionTarget.Serial("COM3"), CardInDevice: true));
+
+        Assert.Equal("freezer v2", File.ReadAllText(Path.Combine(Card, "FREEZER.M65")));
+        Assert.Equal("ethload", File.ReadAllText(Path.Combine(Card, "ETHLOAD.M65")));
+        Assert.Equal("mine", File.ReadAllText(Path.Combine(Card, "MYGAME.D81")));
+        Assert.Equal("R6 CORE", File.ReadAllText(Path.Combine(Card, "mega65r6-20250919.07-r-0.97.2-03b24c6.cor")));
+        Assert.Equal(StepStatus.Done, report.Steps.Single(s => s.Number == 11).Status);
+        Assert.Contains("read back", report.Steps.Single(s => s.Number == 11).Detail);
+        Assert.Equal(2, card.Uploads); // system files, then the core
+        Assert.Equal(3, gate.Prompts);
+    }
+
+    [Fact]
+    public async Task CardInDeviceNeedsAConnection()
+    {
+        SeedCard();
+        var (engine, _) = Create(DeviceState.Unknown, remoteCard: new RemoteCardTests.FolderCard(Card));
+        var report = await engine.RunAsync(new UpdateOptions("", null, HardwareModel.R6, CardInDevice: true));
+        Assert.Equal("Connection required.", report.Outcome);
+        Assert.Equal(StepStatus.NeedsUser, report.Steps.Single(s => s.Number == 1).Status);
+        Assert.Equal("freezer v1", File.ReadAllText(Path.Combine(Card, "FREEZER.M65")));
     }
 
     [Fact]

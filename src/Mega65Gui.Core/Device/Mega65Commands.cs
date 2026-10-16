@@ -104,6 +104,18 @@ public sealed class Mega65Commands(ToolInstallation tools, IProcessRunner runner
             .Select(l => l["MEGA65 found at ".Length..].Trim())
             .ToList();
 
+    /// <summary>
+    /// Runs mega65_ftp commands with <paramref name="workingDirectory"/> as the local folder
+    /// ("get" saves there, "put" reads from there). Each run loads a helper into the MEGA65's
+    /// memory and resets the machine when it exits.
+    /// </summary>
+    public async Task<ProcessResult> FtpAsync(ConnectionTarget t, string workingDirectory, IProgress<string>? output, CancellationToken ct, params string[] commands)
+    {
+        var (tool, args) = FtpArgs(t, await FtpSupportsYesAsync(ct), commands);
+        var exe = tools.PathOf(tool) ?? throw new FileNotFoundException("mega65_ftp is not installed. Install the device tools first.");
+        return await runner.RunAsync(exe, args, Long, output, ct, workingDirectory);
+    }
+
     private Task<ProcessResult> Run((string Tool, List<string> Args) cmd, TimeSpan timeout, CancellationToken ct, IProgress<string>? output = null)
     {
         var exe = tools.PathOf(cmd.Tool) ?? throw new FileNotFoundException($"{cmd.Tool} is not installed. Install the MEGA65 tools first.");

@@ -40,6 +40,7 @@ The in-app **Features** page shows the same list from `src/Mega65Gui.Core/Featur
 | Filehost | Sign in with your own Filehost account | – | – | Implemented (verified with a real account) |
 | Filehost | Owner-restricted (closed ROM) downloads | – | – | Implemented (via your sign-in; verified with a real account) |
 | Update | Update My MEGA65 (12-step guided workflow) | – | – | Implemented |
+| Update | Update the SD card inside the MEGA65 (USB/JTAG or Ethernet) | Manual, via SD Card Manager | `mega65_ftp` get/put | Hardware unverified (manual run verified on an R6) |
 | Update | Core flashing from the PC | – | `mega65_ftp flash`: R2/R3 + Vivado only; refuses R4–R6 and Ethernet | Not offered: guided MEGAFLASH |
 | Tools | Install official mega65-tools from the Filehost | Bundles binaries | – | Implemented |
 | Connection | USB/JTAG serial connection | COM port, FTDI D2XX | `m65 -l COMx -s 2000000` (on Windows `-l` is required) | Implemented (verified on an R6) |

@@ -12,16 +12,17 @@ public sealed record ProcessResult(int ExitCode, string StdOut, string StdErr, T
 public interface IProcessRunner
 {
     Task<ProcessResult> RunAsync(string fileName, IReadOnlyList<string> args, TimeSpan timeout,
-        IProgress<string>? output = null, CancellationToken ct = default);
+        IProgress<string>? output = null, CancellationToken ct = default, string? workingDirectory = null);
 }
 
 public sealed class ProcessRunner : IProcessRunner
 {
     public async Task<ProcessResult> RunAsync(string fileName, IReadOnlyList<string> args, TimeSpan timeout,
-        IProgress<string>? output = null, CancellationToken ct = default)
+        IProgress<string>? output = null, CancellationToken ct = default, string? workingDirectory = null)
     {
         var psi = new ProcessStartInfo(fileName)
         {
+            WorkingDirectory = workingDirectory ?? "",
             // Tools must never wait for keyboard input; stdin is redirected and closed at once.
             RedirectStandardInput = true,
             RedirectStandardOutput = true,

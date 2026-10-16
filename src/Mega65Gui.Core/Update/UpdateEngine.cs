@@ -21,7 +21,8 @@ public sealed class UpdateEngine(
     IDeviceProbe probe,
     IApprovalGate gate,
     AppPaths paths,
-    IContiguityChecker? contiguity = null)
+    IContiguityChecker? contiguity = null,
+    Func<ConnectionTarget, IRemoteCard>? remoteCards = null)
 {
     public static readonly string[] StepTitles =
     [
@@ -82,6 +83,12 @@ public sealed class UpdateEngine(
     {
         // 1. Connection and capabilities
         Set(1, StepStatus.Running, "");
+        if (o.CardInDevice && (o.Connection is null || remoteCards is null))
+        {
+            Set(1, StepStatus.NeedsUser, "Updating the card inside the MEGA65 needs a USB/JTAG or Ethernet connection. Connect on the Device page first.");
+            _report.Outcome = "Connection required.";
+            return;
+        }
         DeviceState device = DeviceState.Unknown;
         if (o.Connection is { } conn)
         {
@@ -161,9 +168,21 @@ public sealed class UpdateEngine(
             : " WARNING: this package was expected to include MEGA65.ROM but does not.";
         Set(5, StepStatus.Done, $"{manifest.Size:N0} bytes, sha256 {manifest.Sha256}. Core: {(coreFile is null ? "none for this model" : Path.GetFileName(coreFile))}.{romCheck}");
 
+        // The card is either in a PC card reader (a folder) or inside the MEGA65 (reached with mega65_ftp).
+        RemoteSdSync? remote = null;
+        if (o.CardInDevice)
+        {
+            if (o.Connection is null || remoteCards is null)
+                throw new InvalidOperationException("Connect to the MEGA65 first to update the card inside it.");
+            remote = new RemoteSdSync(remoteCards(o.Connection));
+        }
+
         // 6. Compare with card
-        Set(6, StepStatus.Running, "");
-        var plan = await new SdSyncPlanner().PlanAsync(package.SdCardRoot, o.SdCardPath, log, ct);
+        Set(6, StepStatus.Running, remote is null ? "" : $"{remote.Description}. The MEGA65 resets after each card operation.");
+        SyncPlan plan;
+        string? remoteBackupDir = null;
+        if (remote is null) plan = await new SdSyncPlanner().PlanAsync(package.SdCardRoot, o.SdCardPath, log, ct);
+        else (plan, remoteBackupDir) = await remote.PlanAsync(package.SdCardRoot, paths.Backups, log, ct);
         var adds = plan.Items.Count(i => i.Action == SyncAction.Add);
         var reps = plan.Items.Count(i => i.Action == SyncAction.Replace);
         Set(6, StepStatus.Done, $"{adds} to add, {reps} to replace, {plan.Items.Count(i => i.Action == SyncAction.Unchanged)} unchanged, {plan.Items.Count(i => i.Action == SyncAction.TargetOnly)} of your own files left alone.");
@@ -175,7 +194,9 @@ public sealed class UpdateEngine(
             if (approved is null) { _report.Outcome = "Cancelled before SD changes."; Set(7, StepStatus.Skipped, "Cancelled"); Set(8, StepStatus.Skipped, "Cancelled"); return; }
             Set(7, StepStatus.Running, "");
             Set(8, StepStatus.Running, "");
-            var result = await new SdSyncExecutor(contiguity).ApplyAsync(plan, approved, paths.Backups, log, ct);
+            var result = remote is null
+                ? await new SdSyncExecutor(contiguity).ApplyAsync(plan, approved, paths.Backups, log, ct)
+                : await remote.ApplyAsync(plan, approved, remoteBackupDir!, log, ct);
             _report.SdSync = result;
             var backedUp = result.Results.Count(r => r.BackupPath is not null);
             Set(7, StepStatus.Done, backedUp == 0 ? "No existing files needed backing up." : $"{backedUp} file(s) backed up to {result.BackupDirectory}.");
@@ -201,20 +222,42 @@ public sealed class UpdateEngine(
         {
             Set(9, StepStatus.Running, "");
             var coreDir = Path.GetDirectoryName(coreFile)!;
-            var corePlan = await new SdSyncPlanner().PlanAsync(coreDir, o.SdCardPath, null, ct);
             var coreRel = Path.GetFileName(coreFile);
-            var coreItem = corePlan.Items.First(i => string.Equals(i.RelativePath, coreRel, StringComparison.OrdinalIgnoreCase));
-            corePlan = corePlan with { Items = [coreItem], Warnings = [] };
             stagedCore = coreRel;
-            if (coreItem.Action == SyncAction.Unchanged)
-                Set(9, StepStatus.Done, $"{coreRel} is already on the card.");
-            else if (await gate.ConfirmAsync("Stage core", $"Copy {coreRel} to the root of the SD card so MEGAFLASH can install it?", ct))
+            if (remote is null)
             {
-                var r = await new SdSyncExecutor().ApplyAsync(corePlan, new HashSet<string> { coreRel }, paths.Backups, log, ct);
-                _report.CoreStaging = r;
-                Set(9, r.AllSucceeded ? StepStatus.Done : StepStatus.Failed, r.AllSucceeded ? $"{coreRel} copied and verified." : r.Results[0].Message ?? "Failed");
+                var corePlan = await new SdSyncPlanner().PlanAsync(coreDir, o.SdCardPath, null, ct);
+                var coreItem = corePlan.Items.First(i => string.Equals(i.RelativePath, coreRel, StringComparison.OrdinalIgnoreCase));
+                corePlan = corePlan with { Items = [coreItem], Warnings = [] };
+                if (coreItem.Action == SyncAction.Unchanged)
+                    Set(9, StepStatus.Done, $"{coreRel} is already on the card.");
+                else if (await gate.ConfirmAsync("Stage core", $"Copy {coreRel} to the root of the SD card so MEGAFLASH can install it?", ct))
+                {
+                    var r = await new SdSyncExecutor().ApplyAsync(corePlan, new HashSet<string> { coreRel }, paths.Backups, log, ct);
+                    _report.CoreStaging = r;
+                    Set(9, r.AllSucceeded ? StepStatus.Done : StepStatus.Failed, r.AllSucceeded ? $"{coreRel} copied and verified." : r.Results[0].Message ?? "Failed");
+                }
+                else { stagedCore = null; Set(9, StepStatus.Skipped, "Declined by user."); }
             }
-            else { stagedCore = null; Set(9, StepStatus.Skipped, "Declined by user."); }
+            else
+            {
+                // Cores are 8 MB; over USB/JTAG that is minutes, so an identical name and size counts as present
+                // (release core names include the commit hash).
+                var size = new FileInfo(coreFile).Length;
+                var listing = await remote.ListAsync(ct);
+                if (listing.Any(e => !e.IsDirectory && e.Matches(coreRel) && e.Size == size))
+                    Set(9, StepStatus.Done, $"{coreRel} is already on the card (same name and size).");
+                else if (await gate.ConfirmAsync("Stage core",
+                    $"Upload {coreRel} ({size / 1048576.0:0.0} MB) to the MEGA65's SD card so MEGAFLASH can install it? Over USB/JTAG this takes several minutes.", ct))
+                {
+                    var item = new SyncItem(coreRel, SyncAction.Add, size, null, await Hashing.Sha256FileAsync(coreFile, ct), null);
+                    var corePlan = new SyncPlan(coreDir, remote.Description, [item], [], DateTimeOffset.Now);
+                    var r = await remote.ApplyAsync(corePlan, new HashSet<string> { coreRel }, paths.Backups, log, ct);
+                    _report.CoreStaging = r;
+                    Set(9, r.AllSucceeded ? StepStatus.Done : StepStatus.Failed, r.AllSucceeded ? $"{coreRel} uploaded and verified." : r.Results[0].Message ?? "Failed");
+                }
+                else { stagedCore = null; Set(9, StepStatus.Skipped, "Declined by user."); }
+            }
         }
 
         // 10. Core installation: guided only
@@ -231,14 +274,26 @@ public sealed class UpdateEngine(
 
         // 11. Verify
         Set(11, StepStatus.Running, "");
-        var verify = await new SdSyncPlanner().PlanAsync(package.SdCardRoot, o.SdCardPath, null, ct);
-        var approvedPaths = _report.SdSync?.Results.Where(r => r.Outcome == ItemOutcome.Written).Select(r => r.Item.RelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase) ?? [];
-        var stillDifferent = verify.Changes.Where(c => approvedPaths.Contains(c.RelativePath)).ToList();
-        var declined = verify.Changes.Count() - stillDifferent.Count;
-        Set(11, stillDifferent.Count == 0 ? StepStatus.Done : StepStatus.Failed,
-            stillDifferent.Count == 0
-                ? $"All written files match the release on re-read.{(declined > 0 ? $" {declined} change(s) you declined remain." : "")}"
-                : $"{stillDifferent.Count} file(s) differ after writing: {string.Join(", ", stillDifferent.Select(s => s.RelativePath))}");
+        if (remote is not null)
+        {
+            // Every uploaded file was already read back from the card and compared in step 8.
+            var bad = _report.SdSync?.Results.Where(r => r.Outcome == ItemOutcome.Failed).Select(r => r.Item.RelativePath).ToList() ?? [];
+            Set(11, bad.Count == 0 ? StepStatus.Done : StepStatus.Failed, bad.Count == 0
+                ? "Every uploaded file was read back from the card and matches the release."
+                : $"{bad.Count} file(s) did not match on read-back: {string.Join(", ", bad)}");
+        }
+        else
+        {
+            var verify = await new SdSyncPlanner().PlanAsync(package.SdCardRoot, o.SdCardPath, null, ct);
+            var approvedPaths = _report.SdSync?.Results.Where(r => r.Outcome == ItemOutcome.Written).Select(r => r.Item.RelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase) ?? [];
+            var stillDifferent = verify.Changes.Where(c => approvedPaths.Contains(c.RelativePath)).ToList();
+            var declined = verify.Changes.Count() - stillDifferent.Count;
+            Set(11, stillDifferent.Count == 0 ? StepStatus.Done : StepStatus.Failed,
+                stillDifferent.Count == 0
+                    ? $"All written files match the release on re-read.{(declined > 0 ? $" {declined} change(s) you declined remain." : "")}"
+                    : $"{stillDifferent.Count} file(s) differ after writing: {string.Join(", ", stillDifferent.Select(s => s.RelativePath))}");
+
+        }
 
         _report.Outcome = _report.Steps.Any(s => s.Status == StepStatus.Failed) ? "Completed with errors."
             : stagedCore is not null ? "SD card updated. Finish the core install on the MEGA65."
