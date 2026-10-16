@@ -153,7 +153,10 @@ public sealed class UpdateEngine(
         var package = ReleasePackage.Inspect(extracted);
         var coreFile = SelectCore(package, model);
         if (package.SdCardRoot is null) throw new InvalidDataException("The release package has no recognisable SD-card files.");
-        Set(5, StepStatus.Done, $"{manifest.Size:N0} bytes, sha256 {manifest.Sha256}. Core: {(coreFile is null ? "none for this model" : Path.GetFileName(coreFile))}.");
+        var romCheck = !candidate.Info.IncludesRom ? ""
+            : package.HasRom ? " Includes MEGA65.ROM."
+            : " WARNING: this package was expected to include MEGA65.ROM but does not.";
+        Set(5, StepStatus.Done, $"{manifest.Size:N0} bytes, sha256 {manifest.Sha256}. Core: {(coreFile is null ? "none for this model" : Path.GetFileName(coreFile))}.{romCheck}");
 
         // 6. Compare with card
         Set(6, StepStatus.Running, "");

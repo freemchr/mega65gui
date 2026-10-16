@@ -7,6 +7,9 @@ namespace Mega65Gui.Core.Packages;
 /// </summary>
 public sealed record ReleasePackage(string Root, IReadOnlyList<string> CoreFiles, string? SdCardRoot, IReadOnlyList<string> Documents)
 {
+    /// <summary>True when the SD-card files include the closed ROM (owner-only packages).</summary>
+    public bool HasRom => SdCardRoot is not null && File.Exists(Path.Combine(SdCardRoot, "MEGA65.ROM"));
+
     // Files that ship in the root of a MEGA65 SD card as part of the release.
     private static readonly string[] SdMarkers = ["FREEZER.M65", "AUDIOMIX.M65", "MEGAINFO.M65", "ONBOARD.M65", "MAKEDISK.M65"];
 

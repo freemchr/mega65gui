@@ -109,7 +109,8 @@ The release packages themselves are discovered dynamically. Only the two tools f
   3. Otherwise falls back to the no-ROM package and says why.
 - **The redeem flow is not automated.** Redeem your code on the website.
 - **Verified:** sign-in works with a real account (2026-10-16).
-- **Not yet verified:** the file-name format of the with-ROM packages is unconfirmed. The parser accepts `…-<hash>.7z` or any suffix other than `-norom`.
+- **Verified (R6 0.97.2):** the with-ROM package has the same layout as the no-ROM one plus `sdcard-files/MEGA65.ROM` (128 KB). Its top folder is `mega65r6-release-0.97.2-03b24c6`, with no `-norom` suffix. The app checks that `MEGA65.ROM` is really present before reporting a with-ROM update.
+- **Still to confirm:** the API `filename` of the with-ROM version. The parser treats anything other than `-norom` as including the ROM. The parser accepts `…-<hash>.7z` or any suffix other than `-norom`.
 
 ## Open questions
 
