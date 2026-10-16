@@ -34,10 +34,22 @@ public sealed class FilehostClient(HttpClient http)
         return ParseVersionList(json);
     }
 
+    /// <summary>
+    /// POSTs like the website's jQuery calls. The Filehost rejects some requests (notably
+    /// login.php, with "Invalid request") unless they carry X-Requested-With: XMLHttpRequest.
+    /// </summary>
+    internal static HttpRequestMessage AjaxPost(string script, IEnumerable<KeyValuePair<string, string>> form)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Post, new Uri(PhpBase, script)) { Content = new FormUrlEncodedContent(form) };
+        req.Headers.Add("X-Requested-With", "XMLHttpRequest");
+        req.Headers.Referrer = new Uri(BaseUri, "html/main.php");
+        return req;
+    }
+
     private async Task<string> PostAsync(string script, KeyValuePair<string, string>[] form, CancellationToken ct)
     {
-        using var content = new FormUrlEncodedContent(form);
-        using var resp = await http.PostAsync(new Uri(PhpBase, script), content, ct);
+        using var req = AjaxPost(script, form);
+        using var resp = await http.SendAsync(req, ct);
         resp.EnsureSuccessStatusCode();
         return await resp.Content.ReadAsStringAsync(ct);
     }

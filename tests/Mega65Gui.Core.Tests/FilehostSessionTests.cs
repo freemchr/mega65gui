@@ -33,6 +33,9 @@ public sealed class FilehostSessionTests : IDisposable
             {
                 case "/php/login.php":
                     LastLoginBody = body;
+                    // The real server answers "Invalid request" without the jQuery AJAX header.
+                    if (!req.Headers.TryGetValues("X-Requested-With", out var xrw) || !xrw.Contains("XMLHttpRequest"))
+                        return Json("""{"state":"NOTOK","message":"Invalid request"}""");
                     if (!body.Contains("logindata%5Bpassword%5D=correct")) return Json("""{"state":"NOTOK","message":"Wrong password"}""");
                     var r = Json("""{"state":"OK"}""");
                     _sessions.Add("PHPSESSID=s1");

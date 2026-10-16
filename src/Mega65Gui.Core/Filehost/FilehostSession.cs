@@ -26,12 +26,13 @@ public sealed class FilehostSession(HttpClient http)
     public async Task<SignInOutcome> SignInAsync(string userName, string password, CancellationToken ct = default)
     {
         // jQuery encodes the site's {"logindata": {...}} payload as bracketed form fields.
-        using var content = new FormUrlEncodedContent(
+        // The site trims both values before sending, so the same is done here.
+        using var req = FilehostClient.AjaxPost("login.php",
         [
-            new("logindata[username]", userName),
-            new("logindata[password]", password),
+            new("logindata[username]", userName.Trim()),
+            new("logindata[password]", password.Trim()),
         ]);
-        using var resp = await http.PostAsync(new Uri(FilehostClient.PhpBase, "login.php"), content, ct);
+        using var resp = await http.SendAsync(req, ct);
         resp.EnsureSuccessStatusCode();
         var (state, message) = ReadState(await resp.Content.ReadAsStringAsync(ct));
 
@@ -41,7 +42,7 @@ public sealed class FilehostSession(HttpClient http)
             "NOTOK" => new SignInOutcome(SignInResult.InvalidCredentials, message ?? "Wrong user name or password."),
             _ => new SignInOutcome(SignInResult.Error, message ?? "The Filehost returned an unexpected answer."),
         };
-        UserName = outcome.Result == SignInResult.Success ? userName : null;
+        UserName = outcome.Result == SignInResult.Success ? userName.Trim() : null;
         Changed?.Invoke();
         return outcome;
     }
@@ -50,7 +51,8 @@ public sealed class FilehostSession(HttpClient http)
     {
         try
         {
-            using var resp = await http.PostAsync(new Uri(FilehostClient.PhpBase, "logout.php"), new FormUrlEncodedContent([]), ct);
+            using var req = FilehostClient.AjaxPost("logout.php", []);
+            using var resp = await http.SendAsync(req, ct);
         }
         finally
         {
