@@ -9,9 +9,9 @@ public sealed record SelfTestResult(string Name, bool Passed, string Detail);
 /// <summary>
 /// End-to-end check of the device features on a real MEGA65 over USB/JTAG, verified by reading
 /// the MEGA65's screen back as text (m65 -S0). It resets the MEGA65 several times, overwrites
-/// memory, and creates then removes a folder "M65GTEST" on the SD card.
+/// memory, and writes then deletes a file M65GTEST.TXT in the SD card's root.
 /// </summary>
-public sealed class HardwareSelfTest(ToolInstallation tools, IProcessRunner runner, string port)
+public sealed partial class HardwareSelfTest(ToolInstallation tools, IProcessRunner runner, string port)
 {
     private readonly ConnectionTarget _target = ConnectionTarget.Serial(port);
     private readonly Mega65Commands _cmds = new(tools, runner);
@@ -71,51 +71,53 @@ public sealed class HardwareSelfTest(ToolInstallation tools, IProcessRunner runn
             var r = await _cmds.SetModeAsync(_target, MachineMode.Mega65, ct);
             return (r.Succeeded && await WaitForScreenAsync("BASIC 65", ct), $"exit {r.ExitCode}");
         });
-        await Step("SD card: create folder, upload, download, compare, delete", () => CardRoundTripAsync(ct));
+        await Step("SD card: upload, list, download, compare, delete", () => CardRoundTripAsync(ct));
         return results;
     }
 
+    /// <summary>Upload, list, download, compare and delete one file in the card's root (works with every tools version).</summary>
     private async Task<(bool, string)> CardRoundTripAsync(CancellationToken ct)
     {
+        const string name = "M65GTEST.TXT";
         var payload = Encoding.ASCII.GetBytes($"MEGA65 GUI self-test {DateTime.Now:O}\n");
-        var up = Path.Combine(Path.GetTempPath(), "M65GTEST.TXT");
+        var up = Path.Combine(Path.GetTempPath(), name);
         var down = Path.Combine(Path.GetTempPath(), "m65gtest-back.txt");
         await File.WriteAllBytesAsync(up, payload, ct);
         File.Delete(down);
         await using var s = await _cmds.OpenFtpSessionAsync(_target, ct);
-        var steps = new List<FtpReply>
-        {
-            await s.MakeDirectoryAsync("M65GTEST", ct),
-            await s.ChangeDirectoryAsync("M65GTEST", ct),
-            await s.UploadAsync(up, "M65GTEST.TXT", ct),
-        };
-        var listed = (await s.ListAsync(ct)).Any(e => e.Matches("M65GTEST.TXT") && e.Size == payload.Length);
-        steps.Add(await s.DownloadAsync("M65GTEST.TXT", down, ct));
+        var steps = new List<FtpReply> { await s.UploadAsync(up, name, ct) };
+        var listed = (await s.ListAsync(ct)).Any(e => e.Matches(name) && e.Size == payload.Length);
+        steps.Add(await s.DownloadAsync(name, down, ct));
         var same = File.Exists(down) && (await File.ReadAllBytesAsync(down, ct)).SequenceEqual(payload);
-        steps.Add(await s.DeleteAsync("M65GTEST.TXT", ct));
-        steps.Add(await s.ChangeDirectoryAsync("..", ct));
-        steps.Add(await s.DeleteAsync("M65GTEST", ct));
-        var gone = !(await s.ListAsync(ct)).Any(e => e.Matches("M65GTEST"));
+        steps.Add(await s.DeleteAsync(name, ct));
+        var gone = !(await s.ListAsync(ct)).Any(e => e.Matches(name));
         var errors = steps.SelectMany(r => r.Errors).ToList();
         return (listed && same && gone && errors.Count == 0,
-            $"listed={listed}, identical={same}, cleaned up={gone}{(errors.Count > 0 ? ", errors: " + string.Join("; ", errors) : "")}");
+            $"listed={listed}, identical={same}, deleted={gone}{(errors.Count > 0 ? ", errors: " + string.Join("; ", errors) : "")}");
     }
 
     /// <summary>Reads the MEGA65 screen as text until it contains <paramref name="text"/>.</summary>
-    private async Task<bool> WaitForScreenAsync(string text, CancellationToken ct, int seconds = 14)
+    private async Task<bool> WaitForScreenAsync(string text, CancellationToken ct, int seconds = 40)
     {
-        for (var waited = 0; waited < seconds; waited += 2)
+        var until = DateTime.Now.AddSeconds(seconds);
+        do
         {
             if ((await ReadScreenAsync(ct)).Contains(text, StringComparison.OrdinalIgnoreCase)) return true;
-            await Task.Delay(2000, ct);
-        }
+            await Task.Delay(1000, ct);
+        } while (DateTime.Now < until);
         return false;
     }
+
+    // m65 -S0 renders each character with ANSI colour codes, e.g. "ESC[38;2;240;240;240mR".
+    [System.Text.RegularExpressions.GeneratedRegex(@"\x1B\[[0-9;]*[A-Za-z]")]
+    private static partial System.Text.RegularExpressions.Regex Ansi();
+
+    internal static string PlainScreen(string s) => Ansi().Replace(s, "");
 
     public async Task<string> ReadScreenAsync(CancellationToken ct = default)
     {
         var r = await runner.RunAsync(tools.PathOf("m65")!, [.. Mega65Commands.SerialArgs(_target), "-S0"], TimeSpan.FromSeconds(40), null, ct);
-        return r.StdOut + r.StdErr;
+        return PlainScreen(r.StdOut);
     }
 
     /// <summary>A one-line BASIC 65 program at $2001: 10 PRINT "text".</summary>

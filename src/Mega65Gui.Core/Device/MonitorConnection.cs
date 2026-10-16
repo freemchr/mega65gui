@@ -58,9 +58,14 @@ public static class KeyMatrix
         _ => throw new ArgumentOutOfRangeException(nameof(key)),
     };
 
-    /// <summary>Monitor commands that press and then release a key.</summary>
-    public static (string Press, string Release) Commands(byte key, byte modifier) =>
-        ($"sffd3615 {key:x2} {modifier:x2} 7f\r", "sffd3615 7f 7f 7f\r");
+    /// <summary>
+    /// Monitor commands to press and release a key. With a modifier, the modifier is pressed on its
+    /// own first: the MEGA65's hardware keyboard scanner does not reliably see Shift otherwise
+    /// (the same sequence mega65-tools uses).
+    /// </summary>
+    public static IReadOnlyList<string> Commands(byte key, byte modifier) => modifier == None
+        ? [$"sffd3615 {key:x2} 7f\r", "sffd3615 7f 7f 7f\r"]
+        : [$"sffd3615 {modifier:x2} 7f\r", $"sffd3615 {modifier:x2} {key:x2}\r", "sffd3615 7f 7f 7f\r"];
 }
 
 /// <summary>
@@ -113,11 +118,12 @@ public sealed class MonitorConnection : IDisposable
 
     public async Task PressAsync(byte key, byte modifier, CancellationToken ct = default)
     {
-        var (press, release) = KeyMatrix.Commands(key, modifier);
-        await SendAsync(press, ct);
-        await Task.Delay(30, ct); // let a keyboard scan see the key
-        await SendAsync(release, ct);
-        await Task.Delay(20, ct);
+        // Each step needs a keyboard scan to see it before the next.
+        foreach (var command in KeyMatrix.Commands(key, modifier))
+        {
+            await SendAsync(command, ct);
+            await Task.Delay(25, ct);
+        }
     }
 
     public void Dispose()

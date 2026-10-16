@@ -100,6 +100,8 @@ public sealed partial class FtpSession : IAsyncDisposable
             LastUsed = DateTime.Now;
             string[] errors;
             lock (_errors) errors = [.. _errors];
+            // Some failures are printed as normal output, e.g. "TODO: Unable to delete directories as yet".
+            errors = [.. errors, .. OutputProblems(output)];
             return new FtpReply(command, output, CurrentDirectory, errors);
         }
         finally
@@ -135,6 +137,11 @@ public sealed partial class FtpSession : IAsyncDisposable
             _buffer.Append(Encoding.Latin1.GetString(_chunk, 0, n));
         }
     }
+
+    internal static IEnumerable<string> OutputProblems(string output) =>
+        output.Split('\n').Select(l => l.Trim())
+            .Where(l => l.StartsWith("TODO:", StringComparison.Ordinal) || l.StartsWith("ERROR", StringComparison.Ordinal)
+                        || l.Contains("Unable to", StringComparison.OrdinalIgnoreCase) || l.Contains("not found", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Quotes a name for mega65_ftp's command parser.</summary>
     public static string Quote(string name) =>

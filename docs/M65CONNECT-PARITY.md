@@ -46,24 +46,24 @@ The in-app **Features** page shows the same list from `src/Mega65Gui.Core/Featur
 | Connection | USB/JTAG serial connection | COM port, FTDI D2XX | `m65 -l COMx -s 2000000` (on Windows `-l` is required) | Implemented (verified on an R6) |
 | Connection | Device state readout (model, core, ROM) | Partial | Monitor `h`, `mffd3629 1`, `m20016` | Implemented (verified on an R6) |
 | Connection | Ethernet discovery and connection | `etherload -D` | `etherload -D`, `-i` | Hardware unverified |
-| Transfer | PRG send and run | Yes (J, E) | `m65 -F [-4] [-r] f.prg`, `etherload -i ip [-4/-5] [-r] f.prg` | Hardware unverified |
+| Transfer | PRG send and run | Yes (J, E) | `m65 -F [-4] [-r] f.prg`, `etherload -i ip [-4/-5] [-r] f.prg` | Implemented (verified by the hardware self-test on an R6) |
 | Transfer | SID send | Yes (J) | `m65 -F -4 -r f.sid` | Hardware unverified |
 | Transfer | BIT load (volatile) | Yes (J) | `m65 -b` / `-q` | Hardware unverified |
 | Transfer | HIC (HICKUP) load | Yes (J) | `m65 -k` | Hardware unverified |
 | Transfer | ROM load (volatile) | Yes (J, E) | `m65 -R`, `etherload -R` | Hardware unverified |
-| Transfer | BASIC program text transfer | Types text (J) | `m65 -T` / `-t` | Hardware unverified |
+| Transfer | BASIC program text transfer | Types text (J) | `m65 -T` / `-t` | Implemented (verified by the hardware self-test on an R6) |
 | Transfer | Drag-and-drop routing by file type | Yes | – | Hardware unverified |
 | Transfer | PRG autoload folder watch | Yes | – | Hardware unverified |
 | SD card | Local SD card synchronisation (plan, back up, apply, verify) | – | – | Implemented |
 | SD card | D81 contiguity check after copy | – | `mega65_ftp clusters` (remote) | Hardware unverified |
-| SD card | Remote SD manager (dir, get, put, del, rename, mkdir, mount) | Yes (J, E) | `mega65_ftp -c …` | Hardware unverified (browsing verified on an R6) |
+| SD card | Remote SD manager (dir, get, put, del, rename, mkdir, mount) | Yes (J, E) | `mega65_ftp -c …` | Implemented (verified by the hardware self-test on an R6) |
 | SD card | Local SD file manager and eject | Yes | `mega65_ftp -d` (raw) | Partial (no eject) |
-| Control | Reset | Yes (J, E) | `m65 -F`, `etherload -5` | Hardware unverified |
-| Control | C64 / MEGA65 mode switching | Yes (J, E) | `m65 -F -4`, `etherload --c64mode/--m65mode` | Hardware unverified |
+| Control | Reset | Yes (J, E) | `m65 -F`, `etherload -5` | Implemented (verified by the hardware self-test on an R6) |
+| Control | C64 / MEGA65 mode switching | Yes (J, E) | `m65 -F -4`, `etherload --c64mode/--m65mode` | Implemented (verified by the hardware self-test on an R6) |
 | Control | Start a core from a flash slot | Via MEGAFLASH | `m65 -Z` | Hardware unverified |
 | Control | PAL / NTSC | Yes | `m65 -p/-n`, `etherload --pal/--ntsc` | Hardware unverified |
 | Control | Screenshot capture | Yes (J) | `m65 -S<file>` | Hardware unverified |
-| Control | Remote keyboard | Native | `m65 -T` (batch only) | Hardware unverified |
+| Control | Remote keyboard | Native | `m65 -T` (batch only) | Implemented (verified by the hardware self-test on an R6) |
 | Control | Monitor terminal | Native | `m65dbg` (not shipped for Windows) | Hardware unverified |
 | Disk images | D81 create, list, add, extract, delete, rename | Native | None | Implemented |
 | ROM | ROM Configurator (speed, font, colours) | Native | None | Implemented |

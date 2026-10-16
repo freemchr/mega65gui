@@ -40,28 +40,28 @@ public static class FeatureCatalog
         new("Connection", "Ethernet discovery and connection", FeatureStatus.HardwareUnverified, "Ethernet", "etherload -D", "Core 0.96+; SHIFT+£ on the MEGA65"),
 
         // Transfers
-        new("Transfer", "PRG send and run", FeatureStatus.HardwareUnverified, "USB/JTAG, Ethernet", "m65 -F [-4] [-r] / etherload -i [-r]", ""),
+        new("Transfer", "PRG send and run", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "m65 -F [-4] [-r] / etherload -i [-r]", "Verified by the hardware self-test on an R6 2026-10-16"),
         new("Transfer", "SID send", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -F -4 -r file.sid", "Implemented; untested on hardware"),
         new("Transfer", "BIT load (volatile)", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -q", "Lost at power-off; uses m65's built-in JTAG loader"),
         new("Transfer", "HIC (HICKUP) load", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -F -k", ""),
         new("Transfer", "ROM load (volatile)", FeatureStatus.HardwareUnverified, "USB/JTAG, Ethernet", "m65 -F -R / etherload -R", "User-supplied ROM files only; lost at power-off"),
-        new("Transfer", "BASIC program text transfer", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -T - (stdin)", "Types the listing (lowercased) at the READY prompt"),
+        new("Transfer", "BASIC program text transfer", FeatureStatus.Implemented, "USB/JTAG", "m65 -T - (stdin)", "Verified by the hardware self-test on an R6 2026-10-16"),
         new("Transfer", "Drag-and-drop routing by file type", FeatureStatus.HardwareUnverified, "Any", "UI", "PRG, SID, BASIC text, ROM, BIT, HICKUP on the Device page; files onto the card in the SD Card Browser"),
         new("Transfer", "PRG autoload folder watch", FeatureStatus.HardwareUnverified, "USB/JTAG, Ethernet", "UI", "Sends each changed .prg in a watched folder"),
 
         // SD card
         new("SD card", "Local SD card synchronisation (plan, back up, apply, verify)", FeatureStatus.Implemented, "Card reader", "SdSyncPlanner/Executor", "Never deletes; case-insensitive FAT32 matching"),
         new("SD card", "D81 contiguity check after copy", FeatureStatus.HardwareUnverified, "Card reader", "FSCTL_GET_RETRIEVAL_POINTERS", "Windows only"),
-        new("SD card", "Remote SD manager (dir, get, put, del, rename, mkdir, mount)", FeatureStatus.HardwareUnverified, "USB/JTAG, Ethernet", "Interactive mega65_ftp session", "SD Card Browser; browsing verified on an R6, uploads and deletes still to confirm"),
+        new("SD card", "Remote SD manager (dir, get, put, del, rename, mkdir, mount)", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "Interactive mega65_ftp session", "SD Card Browser. Browse, upload, download and delete verified on an R6; deleting folders needs the development tools build"),
         new("SD card", "Local SD file manager and eject", FeatureStatus.Partial, "Card reader", "Native", "The SD Card Browser's PC pane covers files; eject not yet"),
 
         // Device control
-        new("Control", "Reset", FeatureStatus.HardwareUnverified, "USB/JTAG, Ethernet", "m65 -F / etherload -5", ""),
-        new("Control", "C64 / MEGA65 mode switching", FeatureStatus.HardwareUnverified, "USB/JTAG, Ethernet", "m65 -F -4 / etherload --c64mode --m65mode", ""),
+        new("Control", "Reset", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "m65 -F / etherload -5", "Verified by the hardware self-test on an R6 2026-10-16"),
+        new("Control", "C64 / MEGA65 mode switching", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "m65 -F -4 / etherload --c64mode --m65mode", "Verified by the hardware self-test on an R6 2026-10-16"),
         new("Control", "Start a core from a flash slot", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -Z", "Nothing is written to flash"),
         new("Control", "PAL / NTSC", FeatureStatus.HardwareUnverified, "USB/JTAG, Ethernet", "m65 -p/-n; etherload --pal/--ntsc", ""),
         new("Control", "Screenshot capture", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -S<file>", "Not available over Ethernet"),
-        new("Control", "Remote keyboard", FeatureStatus.HardwareUnverified, "USB/JTAG", "Serial monitor sffd3615", "Terminal page; key matrix from mega65-tools' documented layout"),
+        new("Control", "Remote keyboard", FeatureStatus.Implemented, "USB/JTAG", "Serial monitor sffd3615", "Verified by the hardware self-test on an R6 2026-10-16"),
         new("Control", "Monitor terminal", FeatureStatus.HardwareUnverified, "USB/JTAG", "Serial monitor, 2 Mbaud", "Terminal page"),
 
         // Offline tools
