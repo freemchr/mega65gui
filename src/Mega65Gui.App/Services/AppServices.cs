@@ -22,7 +22,9 @@ public sealed class AppServices
         Filehost = new FilehostClient(Http);
         Session = new FilehostSession(Http);
         Credentials = new CredentialStore(Path.Combine(Paths.Root, "filehost-account.json"));
-        Catalogue = new CatalogueService(Filehost, Paths, session: Session);
+        var anonymousHttp = new HttpClient(new HttpClientHandler { UseCookies = false }) { Timeout = TimeSpan.FromMinutes(2) };
+        anonymousHttp.DefaultRequestHeaders.UserAgent.ParseAdd("Mega65Gui/0.1 (+https://github.com/freemchr/mega65gui)");
+        Catalogue = new CatalogueService(Filehost, Paths, session: Session, anonymousClient: new FilehostClient(anonymousHttp));
         Downloads = new DownloadManager(Http, Paths);
         Runner = new ProcessRunner();
         Tools = new ToolManager(Paths, Runner);

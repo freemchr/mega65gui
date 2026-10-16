@@ -19,6 +19,7 @@ public sealed class FilehostSessionTests : IDisposable
     private sealed class FakeFilehost : HttpMessageHandler
     {
         public string? LastLoginBody;
+        public object? ExtraCatalogueRow;
         public bool ExpireSession;
         private readonly HashSet<string> _sessions = [];
 
@@ -45,7 +46,14 @@ public sealed class FilehostSessionTests : IDisposable
                     _sessions.Clear();
                     return Json("""{"state":"OK"}""");
                 case "/php/readfilespublic.php":
-                    return Json(FilehostCatalogueTests.Fixture("filespublic-sample.json"));
+                    if (ExtraCatalogueRow is null) return Json(FilehostCatalogueTests.Fixture("filespublic-sample.json"));
+                    var rows = System.Text.Json.Nodes.JsonNode.Parse(FilehostCatalogueTests.Fixture("filespublic-sample.json"))!.AsArray();
+                    rows.Insert(0, System.Text.Json.JsonSerializer.SerializeToNode(ExtraCatalogueRow));
+                    return Json(rows.ToJsonString());
+                case "/php/readversionlistpublic.php" when body.Contains(PrivateR6) && ExtraCatalogueRow is not null:
+                    return Json(JsonSerializer.Serialize(new[] { new { fileid = PrivateR6, version = "2.1", versionid = "rom21",
+                        filename = "mega65r6-release-0.97.2-03b24c6.7z", size = "10", comment = "Release 0.97.2", published = "28 Sep 2025",
+                        active = "Y", location = "../files/m/rom.7z" } }));
                 case "/php/readfiledetail.php" when body.Contains(PrivateR6):
                     if (ExpireSession) return Json("""[{"state":"TIMEOUT"}]""");
                     return Json(signedIn
@@ -158,6 +166,24 @@ public sealed class FilehostSessionTests : IDisposable
         Assert.NotNull(rom);
         Assert.True(rom.Info.IncludesRom);
         Assert.Equal(PrivateR6, rom.File.FileId);
+    }
+
+    [Fact]
+    public async Task PicksNoRomReleaseWhenCatalogueAlsoListsTheWithRomPackage()
+    {
+        // A signed-in catalogue lists both R6 packages; the with-ROM one may come first.
+        var (_, session, _) = Create();
+        var server = new FakeFilehost { ExtraCatalogueRow = new { fileid = PrivateR6, title = "MEGA65 Core Release Package (mega65r6) with ROM",
+            category = "Firmware", type = "Release Package", author = "MEGA65", sortdate = "2099/01/01/00/00/00" } };
+        var http = new HttpClient(new CookieHandler(server));
+        var catalogue = new CatalogueService(new FilehostClient(http), new AppPaths(_root), session: new FilehostSession(http));
+        var paths = new AppPaths(_root);
+        var engine = new UpdateEngine(catalogue, new DownloadManager(http, paths), new NullProbe(), new NoGate(), paths);
+
+        var release = await engine.FindReleaseAsync(HardwareModel.R6, default);
+        Assert.NotNull(release);
+        Assert.False(release.Info.IncludesRom);
+        Assert.Equal(PublicR6, release.File.FileId);
     }
 
     private sealed class NullProbe : IDeviceProbe

@@ -8,7 +8,13 @@ public sealed record CatalogueSnapshot(IReadOnlyList<FilehostFile> Files, DateTi
 public sealed record CatalogueQuery(string? Text = null, string? Category = null, string? Platform = null, bool OfficialOnly = false);
 
 /// <summary>Catalogue with an on-disk cache. Falls back to the last good copy when offline.</summary>
-public sealed class CatalogueService(FilehostClient client, AppPaths paths, TimeProvider? clock = null, FilehostSession? session = null)
+/// <param name="anonymousClient">
+/// Client without the sign-in cookie, used for the catalogue list. A signed-in list also contains
+/// owner-only packages; fetching it anonymously keeps the on-disk cache to public files only.
+/// Defaults to <paramref name="client"/>.
+/// </param>
+public sealed class CatalogueService(FilehostClient client, AppPaths paths, TimeProvider? clock = null, FilehostSession? session = null,
+    FilehostClient? anonymousClient = null)
 {
     public static readonly TimeSpan CatalogueTtl = TimeSpan.FromHours(6);
     public static readonly TimeSpan VersionTtl = TimeSpan.FromHours(6);
@@ -30,7 +36,7 @@ public sealed class CatalogueService(FilehostClient client, AppPaths paths, Time
 
         try
         {
-            var json = await client.GetCatalogueJsonAsync(ct);
+            var json = await (anonymousClient ?? client).GetCatalogueJsonAsync(ct);
             var files = FilehostClient.ParseCatalogue(json); // validate before replacing the cache
             await WriteAtomicAsync(CatalogueFile, json, ct);
             return _current = new CatalogueSnapshot(files, _clock.GetUtcNow(), FromCache: false, StaleReason: null);

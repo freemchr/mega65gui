@@ -306,19 +306,27 @@ public sealed class UpdateEngine(
         if (target is null) return null;
         if (catalogue.Current is null) await catalogue.LoadAsync(ct: ct);
 
-        var file = catalogue.Search(new CatalogueQuery(OfficialOnly: true))
+        // There can be more than one official package per board (e.g. "no ROM" and, for signed-in
+        // owners, "with ROM"); consider them all and take the newest version without the ROM.
+        var files = catalogue.Search(new CatalogueQuery(OfficialOnly: true))
             .Where(OfficialReleases.IsStableCorePackage)
-            .FirstOrDefault(f => OfficialReleases.TargetFromTitle(f.Title) == target);
-        if (file is null) return null;
+            .Where(f => OfficialReleases.TargetFromTitle(f.Title) == target)
+            .ToList();
 
-        var versions = await catalogue.GetVersionsAsync(file.FileId, ct: ct);
-        return versions
-            .Where(v => v.IsActive)
-            .Select(v => (v, info: ReleaseInfo.TryParse(v.FileName, v.Comment)))
-            .Where(x => x.info is not null && !x.info.IncludesRom)
-            .OrderByDescending(x => x.info!.Release)
-            .Select(x => new ReleaseCandidate(file, x.v, x.info!))
-            .FirstOrDefault();
+        ReleaseCandidate? best = null;
+        foreach (var file in files)
+        {
+            var versions = await catalogue.GetVersionsAsync(file.FileId, ct: ct);
+            var candidate = versions
+                .Where(v => v.IsActive)
+                .Select(v => (v, info: ReleaseInfo.TryParse(v.FileName, v.Comment)))
+                .Where(x => x.info is not null && !x.info.IncludesRom)
+                .OrderByDescending(x => x.info!.Release)
+                .Select(x => new ReleaseCandidate(file, x.v, x.info!))
+                .FirstOrDefault();
+            if (candidate is not null && (best is null || candidate.Info.Release > best.Info.Release)) best = candidate;
+        }
+        return best;
     }
 
     /// <summary>
