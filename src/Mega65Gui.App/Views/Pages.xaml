@@ -476,6 +476,113 @@
         </DockPanel>
     </DataTemplate>
 
+    <!-- ================= Disk & ROM tools ================= -->
+    <DataTemplate DataType="{x:Type vm:ToolsPageViewModel}">
+        <DockPanel>
+            <StackPanel DockPanel.Dock="Top">
+                <TextBlock Text="Disk &amp; ROM Tools" Style="{StaticResource PageTitle}"/>
+                <TextBlock Style="{StaticResource PageSubtitle}" Text="Work with D81 disk images and ROM files on this PC. No MEGA65 connection is needed."/>
+            </StackPanel>
+            <ContentControl DockPanel.Dock="Bottom" Content="{Binding}" ContentTemplate="{StaticResource StatusFooter}"/>
+            <TabControl>
+                <TabItem Header="D81 disk image">
+                    <DockPanel Margin="0,10,0,0">
+                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <Button Content="New…" Command="{Binding NewDiskCommand}" Margin="0,0,6,6"/>
+                            <Button Content="Open…" Command="{Binding OpenDiskCommand}" Margin="0,0,6,6"/>
+                            <Button Content="Save" Command="{Binding SaveDiskCommand}" IsEnabled="{Binding HasDisk}" Style="{DynamicResource AccentButtonStyle}" Margin="0,0,18,6"/>
+                            <Button Content="Add files…" Command="{Binding AddFilesCommand}" IsEnabled="{Binding HasDisk}" Margin="0,0,6,6"/>
+                            <Button Content="Extract…" Command="{Binding ExtractFilesCommand}" CommandParameter="{Binding SelectedItems, ElementName=DiskList}" IsEnabled="{Binding HasDisk}" Margin="0,0,6,6"/>
+                            <Button Content="Rename" Command="{Binding RenameFileCommand}" CommandParameter="{Binding SelectedItems, ElementName=DiskList}" IsEnabled="{Binding HasDisk}" Margin="0,0,6,6"/>
+                            <Button Content="Delete" Command="{Binding DeleteFilesCommand}" CommandParameter="{Binding SelectedItems, ElementName=DiskList}" IsEnabled="{Binding HasDisk}" Margin="0,0,6,6"/>
+                        </WrapPanel>
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,8" IsEnabled="{Binding HasDisk}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="220"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="60"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                            <TextBlock Text="Disk name" Style="{StaticResource Label}"/>
+                            <TextBox Grid.Column="1" Text="{Binding DiskName, UpdateSourceTrigger=PropertyChanged}" MaxLength="16" CharacterCasing="Upper"/>
+                            <TextBlock Grid.Column="2" Text="ID" Style="{StaticResource Label}" Margin="12,0,8,0"/>
+                            <TextBox Grid.Column="3" Text="{Binding DiskId, UpdateSourceTrigger=PropertyChanged}" MaxLength="2" CharacterCasing="Upper"/>
+                            <TextBlock Grid.Column="4" Text="{Binding DiskInfo}" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                        </Grid>
+                        <Border Style="{StaticResource Card}" Padding="2" Margin="0">
+                            <ListView x:Name="DiskList" ItemsSource="{Binding DiskEntries}" SelectionMode="Extended" BorderThickness="0" Background="Transparent"
+                                      ItemContainerStyle="{StaticResource CompactRow}" FontFamily="Cascadia Mono, Consolas">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Blocks" Width="70" DisplayMemberBinding="{Binding Blocks}"/>
+                                        <GridViewColumn Header="Name" Width="220" DisplayMemberBinding="{Binding Name}"/>
+                                        <GridViewColumn Header="Type" Width="70" DisplayMemberBinding="{Binding TypeName}"/>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </Border>
+                    </DockPanel>
+                </TabItem>
+                <TabItem Header="ROM start-up settings">
+                    <StackPanel Margin="0,10,0,0" MaxWidth="560" HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Button Content="Open ROM…" Command="{Binding OpenRomCommand}" Margin="0,0,10,0"/>
+                            <TextBlock Text="{Binding RomInfo}" Style="{StaticResource Muted}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Border Style="{StaticResource Card}" IsEnabled="{Binding HasRom}">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="260"/></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                                <TextBlock Text="CPU speed" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding Speeds}" SelectedItem="{Binding Speed}" DisplayMemberPath="Label" Margin="0,0,0,6"/>
+                                <TextBlock Grid.Row="1" Text="Font" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Fonts}" SelectedItem="{Binding Font}" DisplayMemberPath="Label" Margin="0,0,0,6"/>
+                                <TextBlock Grid.Row="2" Text="Text colour" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding TextColours}" SelectedItem="{Binding Foreground}" Margin="0,0,0,6">
+                                    <ComboBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal"><Border Width="14" Height="14" CornerRadius="3" Background="{Binding Brush}" BorderBrush="#80808080" BorderThickness="1" Margin="0,0,8,0"/><TextBlock Text="{Binding Name}"/></StackPanel></DataTemplate></ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBlock Grid.Row="3" Text="Border" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding AreaColours}" SelectedItem="{Binding Border}" Margin="0,0,0,6">
+                                    <ComboBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal"><Border Width="14" Height="14" CornerRadius="3" Background="{Binding Brush}" BorderBrush="#80808080" BorderThickness="1" Margin="0,0,8,0"/><TextBlock Text="{Binding Name}"/></StackPanel></DataTemplate></ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBlock Grid.Row="4" Text="Background" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding AreaColours}" SelectedItem="{Binding Background}" Margin="0,0,0,6">
+                                    <ComboBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal"><Border Width="14" Height="14" CornerRadius="3" Background="{Binding Brush}" BorderBrush="#80808080" BorderThickness="1" Margin="0,0,8,0"/><TextBlock Text="{Binding Name}"/></StackPanel></DataTemplate></ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBlock Grid.Row="5" Text="Error messages" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                <ComboBox Grid.Row="5" Grid.Column="1" ItemsSource="{Binding TextColours}" SelectedItem="{Binding ErrorColour}" Margin="0,0,0,6">
+                                    <ComboBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal"><Border Width="14" Height="14" CornerRadius="3" Background="{Binding Brush}" BorderBrush="#80808080" BorderThickness="1" Margin="0,0,8,0"/><TextBlock Text="{Binding Name}"/></StackPanel></DataTemplate></ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBlock Grid.Row="6" Text="REM lines" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                <ComboBox Grid.Row="6" Grid.Column="1" ItemsSource="{Binding TextColours}" SelectedItem="{Binding RemarkColour}" Margin="0,0,0,6">
+                                    <ComboBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal"><Border Width="14" Height="14" CornerRadius="3" Background="{Binding Brush}" BorderBrush="#80808080" BorderThickness="1" Margin="0,0,8,0"/><TextBlock Text="{Binding Name}"/></StackPanel></DataTemplate></ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBlock Grid.Row="7" Text="Keywords" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                <ComboBox Grid.Row="7" Grid.Column="1" ItemsSource="{Binding TextColours}" SelectedItem="{Binding KeywordColour}" Margin="0,0,0,6">
+                                    <ComboBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal"><Border Width="14" Height="14" CornerRadius="3" Background="{Binding Brush}" BorderBrush="#80808080" BorderThickness="1" Margin="0,0,8,0"/><TextBlock Text="{Binding Name}"/></StackPanel></DataTemplate></ComboBox.ItemTemplate>
+                                </ComboBox>
+                                
+                                <Button Grid.Row="8" Grid.Column="1" Content="Save as…" Style="{DynamicResource AccentButtonStyle}" Command="{Binding SaveRomCommand}" HorizontalAlignment="Left" Margin="0,6,0,0"/>
+                            </Grid>
+                        </Border>
+                        <TextBlock Style="{StaticResource Muted}" Text="Your original ROM is never changed; the result is saved as a new file."/>
+                    </StackPanel>
+                </TabItem>
+                <TabItem Header="ROM patch (.rdf)">
+                    <StackPanel Margin="0,10,0,0" MaxWidth="640" HorizontalAlignment="Left">
+                        <TextBlock Text="{Binding PatchInfo}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                            <TextBlock Text="Patch" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                            <TextBlock Grid.Column="1" Text="{Binding PatchPath, TargetNullValue='none'}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,0,6"/>
+                            <Button Grid.Column="2" Content="Choose…" Command="{Binding OpenPatchCommand}" Margin="8,0,0,6"/>
+                            <TextBlock Grid.Row="1" Text="Base ROM" Style="{StaticResource Label}" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PatchBasePath, TargetNullValue='none'}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                            <Button Grid.Row="1" Grid.Column="2" Content="Choose…" Command="{Binding ChoosePatchBaseCommand}" Margin="8,0,0,0"/>
+                        </Grid>
+                        <Button Content="Apply patch and save…" Style="{DynamicResource AccentButtonStyle}" Command="{Binding ApplyPatchCommand}" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </TabItem>
+            </TabControl>
+        </DockPanel>
+    </DataTemplate>
+
     <!-- ================= Tools ================= -->
     <DataTemplate DataType="{x:Type vm:ToolsViewModel}">
         <StackPanel>
