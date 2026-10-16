@@ -6,6 +6,15 @@
             <TextBlock Text="Terminal and remote keyboard" Style="{StaticResource PageTitle}"/>
             <TextBlock Style="{StaticResource PageSubtitle}"
                        Text="Talk to the MEGA65's serial monitor over USB/JTAG, or type on the MEGA65 from this PC's keyboard. The monitor can change memory; use it with care."/>
+            <Expander Header="How to use this page" Style="{StaticResource PageHelp}">
+                <StackPanel Margin="24,6,0,0" MaxWidth="900" HorizontalAlignment="Left">
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Open"/><Run Text=" – Connects to the MEGA65's built-in serial monitor over USB/JTAG. The monitor replies to short commands; its prompt is a dot (.)."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Useful commands"/><Run Text=" – h shows the core version · r shows the CPU registers · m 2001 shows memory from $2001 · d 2001 disassembles from $2001. Type a command in the box at the bottom and press Enter."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Careful"/><Run Text=" – Some monitor commands change memory or stop the CPU. If the MEGA65 stops responding, press Reset on the Device page."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Remote keyboard"/><Run Text=" – Turn it on, click the blue box and type: your keys are pressed on the MEGA65. Enter is RETURN, Esc is RUN/STOP, F1–F8 are the function keys."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Close"/><Run Text=" – Frees the USB connection for the other pages. It closes by itself when you leave this page."/></TextBlock>
+                </StackPanel>
+            </Expander>
         </StackPanel>
         <ContentControl DockPanel.Dock="Bottom" Content="{Binding}" ContentTemplate="{StaticResource StatusFooter}"/>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
@@ -13,6 +22,11 @@
                     Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}"/>
             <Button Content="Close" Command="{Binding DisconnectCommand}" Margin="0,0,6,0" Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisible}}"/>
             <Button Content="Clear" Command="{Binding ClearCommand}" Margin="0,0,18,0"/>
+            <StackPanel Orientation="Horizontal" IsEnabled="{Binding IsOpen}" Margin="0,0,18,0">
+                <Button Content="Version" Command="{Binding QuickCommand}" CommandParameter="h" Margin="0,0,6,0" ToolTip="h: show the monitor and core version"/>
+                <Button Content="Registers" Command="{Binding QuickCommand}" CommandParameter="r" Margin="0,0,6,0" ToolTip="r: show the CPU registers"/>
+                <Button Content="BASIC memory" Command="{Binding QuickCommand}" CommandParameter="m2001" ToolTip="m2001: show memory where BASIC programs start ($2001)"/>
+            </StackPanel>
             <ToggleButton x:Name="KeyboardToggle" IsChecked="{Binding KeyboardActive}" IsEnabled="{Binding IsOpen}" Checked="KeyboardOn"
                           ToolTip="While on, keys typed in the box below are pressed on the MEGA65">
                 <StackPanel Orientation="Horizontal">
@@ -34,7 +48,7 @@
         <Grid DockPanel.Dock="Bottom" Margin="0,8,0,0" IsEnabled="{Binding IsOpen}">
             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <TextBox Text="{Binding Command, UpdateSourceTrigger=PropertyChanged}" FontFamily="Cascadia Mono, Consolas" KeyDown="CommandKeyDown"
-                     ToolTip="Monitor command, e.g. h (help), r (registers), m 2001 (memory)"/>
+                     ToolTip="Monitor command, e.g. h (version), r (registers), m2001 (memory), d2001 (disassemble). Press Enter to send."/>
             <Button Grid.Column="1" Content="Send" Command="{Binding SendCommand}" Margin="6,0,0,0"/>
         </Grid>
         <Border CornerRadius="6" Background="{DynamicResource SolidBackgroundFillColorBaseBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">

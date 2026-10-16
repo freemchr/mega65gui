@@ -6,6 +6,16 @@
             <TextBlock Text="SD Card Browser" Style="{StaticResource PageTitle}"/>
             <TextBlock Style="{StaticResource PageSubtitle}"
                        Text="Your PC on the left, the SD card inside the MEGA65 on the right. Drag files between them, or from Windows Explorer onto the card."/>
+            <Expander Header="How to use this page" Style="{StaticResource PageHelp}">
+                <StackPanel Margin="24,6,0,0" MaxWidth="900" HorizontalAlignment="Left">
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="What it does"/><Run Text=" – Copies files between this PC (left) and the SD card inside the MEGA65 (right) over the USB cable, without taking the card out."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Open card"/><Run Text=" – Loads a small helper program into the MEGA65. Anything unsaved in its memory is lost, and the MEGA65 resets when you close the card."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Arrows"/><Run Text=" – → copies the selected PC files onto the card; ← copies the selected card files to the PC folder. You can also drag files, including from Windows Explorer."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="New folder, Rename, Delete"/><Run Text=" – Change the files on the card. Delete always asks first."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Mount D81"/><Run Text=" – Inserts the selected .D81 disk image into the MEGA65's virtual floppy drive."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Info"/><Run Text=" – Shows a file's size and where it is stored on the card."/></TextBlock>
+                </StackPanel>
+            </Expander>
         </StackPanel>
 
         <!-- Status and tool output -->

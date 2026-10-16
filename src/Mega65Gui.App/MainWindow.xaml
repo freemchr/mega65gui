@@ -1,7 +1,7 @@
 <Window x:Class="Mega65Gui.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MEGA65 GUI" Width="1120" Height="720" MinWidth="860" MinHeight="560" FontSize="13"
+        Title="MEGA65 GUI" Icon="/Assets/app.ico" Width="1120" Height="720" MinWidth="860" MinHeight="560" FontSize="13"
         Background="{DynamicResource ApplicationBackgroundBrush}">
     <DockPanel>
         <!-- ===== Sidebar ===== -->

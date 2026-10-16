@@ -79,6 +79,34 @@
         <Setter Property="Padding" Value="12"/>
         <Setter Property="Margin" Value="0,0,0,10"/>
     </Style>
+    <!-- "How to use this page" panel under each page title -->
+    <Style x:Key="PageHelp" TargetType="Expander">
+        <Setter Property="Margin" Value="0,-4,0,12"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HeaderTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE946;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding}" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <!-- One line of page help: a bold name followed by what it does -->
+    <Style x:Key="HelpLine" TargetType="TextBlock">
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+        <Setter Property="Margin" Value="0,0,0,6"/>
+        <Setter Property="FontSize" Value="12.5"/>
+    </Style>
+    <Style x:Key="TabIntro" TargetType="TextBlock">
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="Margin" Value="0,0,0,10"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+    </Style>
     <Style x:Key="Icon" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
         <Setter Property="FontSize" Value="14"/>

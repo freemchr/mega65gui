@@ -10,7 +10,12 @@
     <AssemblyName>Mega65Gui</AssemblyName>
     <Product>MEGA65 GUI</Product>
     <Version>0.1.0</Version>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Mega65Gui.Core\Mega65Gui.Core.csproj" />

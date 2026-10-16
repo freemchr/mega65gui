@@ -56,8 +56,13 @@ public sealed partial class TerminalViewModel : PageViewModel
     [RelayCommand]
     private void Clear() { _text.Clear(); Transcript = ""; }
 
+    private bool _lastWasCr;
+
     private void Append(string s)
     {
+        // CR LF can arrive split across two reads; a LF right after a CR is the same line end.
+        if (_lastWasCr && s.StartsWith('\n')) s = s[1..];
+        _lastWasCr = s.EndsWith('\r');
         _text.Append(s.Replace("\r\n", "\n").Replace('\r', '\n'));
         if (_text.Length > 200_000) _text.Remove(0, _text.Length - 150_000);
         Transcript = _text.ToString();
@@ -70,6 +75,14 @@ public sealed partial class TerminalViewModel : PageViewModel
         if (_monitor is null || Command.Length == 0) return;
         var cmd = Command;
         Command = "";
+        await _monitor.SendCommandAsync(cmd);
+    }
+
+    /// <summary>Sends one of the quick-command buttons (h, r, …).</summary>
+    [RelayCommand]
+    private async Task QuickAsync(string cmd)
+    {
+        if (_monitor is null) return;
         await _monitor.SendCommandAsync(cmd);
     }
 

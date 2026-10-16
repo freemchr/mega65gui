@@ -133,4 +133,13 @@ public class DeviceTests
         Assert.Contains("WinUSB", ToolFailureHints.Explain(output));
         Assert.Null(ToolFailureHints.Explain("NOTE resetting MEGA65"));
     }
+
+    [Fact]
+    public void Ethernet_hint_names_the_adapter_without_IPv6()
+    {
+        Assert.Contains("\"Ethernet\"", NetworkCheck.NothingFoundMessage(["Ethernet"]));
+        Assert.Contains("DIP switch 2", NetworkCheck.NothingFoundMessage([]));
+        Assert.True(NetworkCheck.IsVirtual("VMware Virtual Ethernet Adapter for VMnet8"));
+        Assert.False(NetworkCheck.IsVirtual("Realtek USB 2.5GbE Family Controller"));
+    }
 }

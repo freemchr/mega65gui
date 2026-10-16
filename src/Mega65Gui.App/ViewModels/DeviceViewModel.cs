@@ -120,7 +120,7 @@ public sealed partial class DeviceViewModel : PageViewModel
         foreach (var d in await cmds.DiscoverEthernetAsync()) EthernetDevices.Add(d);
         SelectedEthernet = EthernetDevices.FirstOrDefault();
         Status = EthernetDevices.Count == 0
-            ? "No MEGA65 found. Press SHIFT+£ on the MEGA65 to enable the Ethernet loader (core 0.96 or later)."
+            ? NetworkCheck.NothingFoundMessage(NetworkCheck.WiredAdaptersWithoutIpv6())
             : $"Found {EthernetDevices.Count} MEGA65.";
     }, "Searching the local network…");
 

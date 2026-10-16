@@ -19,6 +19,16 @@
                 <TextBlock Text="Update My MEGA65" Style="{StaticResource PageTitle}"/>
                 <TextBlock Style="{StaticResource PageSubtitle}"
                            Text="Finds the right official release, updates your SD card with your approval, backs up what it replaces and guides the core install."/>
+                <Expander Header="How to use this page" Style="{StaticResource PageHelp}">
+                    <StackPanel Margin="24,6,0,0" MaxWidth="900" HorizontalAlignment="Left">
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="What it does"/><Run Text=' – Brings your MEGA65 up to the latest official release: the core (the FPGA "hardware"), the ROM and the system files on the SD card.'/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Model"/><Run Text=" – Leave on Auto to read it from the MEGA65 over USB, or pick it if the MEGA65 is not connected."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="SD card"/><Run Text=' – "In the MEGA65" updates the card while it stays in the machine (needs the USB cable). "In a PC card reader" updates a card you have put into this PC.'/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Include the closed ROM"/><Run Text=" – The MEGA65 ROM is only available to owners. Tick it, and sign in with your Filehost account, to update the ROM too."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Update My MEGA65"/><Run Text=" – Runs the 12 steps below. Nothing on the card changes until you approve the list of changes; replaced files are backed up first."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="The core"/><Run Text=" – Installing a core into flash is done on the MEGA65 itself (MEGAFLASH). The update copies the core to the card and tells you exactly what to press."/></TextBlock>
+                    </StackPanel>
+                </Expander>
             </StackPanel>
             <ContentControl DockPanel.Dock="Bottom" Content="{Binding}" ContentTemplate="{StaticResource StatusFooter}"/>
 
@@ -270,6 +280,24 @@
             <StackPanel DockPanel.Dock="Top">
                 <TextBlock Text="Device" Style="{StaticResource PageTitle}"/>
                 <TextBlock Style="{StaticResource PageSubtitle}" Text="Connect over USB/JTAG or Ethernet, control the machine and manage its SD card remotely."/>
+                <Expander Header="How to use this page" Style="{StaticResource PageHelp}">
+                    <StackPanel Margin="24,6,0,0" MaxWidth="900" HorizontalAlignment="Left">
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Connection"/><Run Text=" – Pick the USB/JTAG COM port and press Connect, or find the MEGA65 on your network with Ethernet. Most features need USB/JTAG."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Reset, C64, MEGA65"/><Run Text=" – Restart the machine, or restart it straight into C64 or MEGA65 mode. Anything unsaved in memory is lost."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Camera button"/><Run Text=" – Saves a picture of the MEGA65's screen as a PNG file."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Drop a file to send it"/><Run Text=" – Drag a program (.prg) here, or press Choose, to load it into the MEGA65. Tick Run to start it; tick C64 program for C64 software."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="SID tune"/><Run Text=" – Plays a C64 music file (.sid). The MEGA65 switches to C64 mode; keys 1–9 on the MEGA65 pick the song."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="BASIC text"/><Run Text=" – Types a BASIC listing saved as text (.bas/.txt) into the MEGA65, as if you typed it yourself."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="ROM (temp)"/><Run Text=" – Starts the MEGA65 with a ROM file from this PC, to try it out. Your SD card is not changed; switching off brings back your normal ROM."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Bitstream"/><Run Text=" – Loads a core (.bit) into the FPGA until you switch off, without touching flash. Needs the WinUSB driver on the adapter's JTAG side."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="HICKUP"/><Run Text=" – Loads a different hypervisor (HICKUP.M65) until the next reset. Mainly for developers."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="PAL / NTSC"/><Run Text=" – Switches the video mode. Your screen may go blank for a moment while it re-syncs."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Start slot"/><Run Text=" – Restarts the MEGA65 from a core already stored in one of its flash slots. Nothing is written to flash."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Run hardware self-test"/><Run Text=" – Checks that connecting, typing, loading programs and the SD card all work. It leaves the machine as it found it."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="PRG autoload"/><Run Text=" – For programmers: choose a folder and press Watch, and every .prg you build there is sent to the MEGA65 and run straight away."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Remote SD card"/><Run Text=" – Type mega65_ftp commands (dir, get, put…) for the card inside the MEGA65. The SD Card Browser does the same with buttons."/></TextBlock>
+                    </StackPanel>
+                </Expander>
             </StackPanel>
             <ContentControl DockPanel.Dock="Bottom" Content="{Binding}" ContentTemplate="{StaticResource StatusFooter}"/>
             <!-- Shown until the official tools are installed -->
@@ -314,7 +342,7 @@
                                     <Button Grid.Column="2" Content="Find" Command="{Binding DiscoverEthernetCommand}" Margin="0,0,6,0"/>
                                     <Button Grid.Column="3" Content="Use" Command="{Binding ConnectEthernetCommand}"/>
                                 </Grid>
-                                <TextBlock Style="{StaticResource Muted}" Margin="0,6,0,0" Text="Ethernet needs core 0.96+. Press SHIFT+£ on the MEGA65 first."/>
+                                <TextBlock Style="{StaticResource Muted}" Margin="0,6,0,0" Text="Ethernet needs core 0.96+, DIP switch 2 ON and SHIFT+£ pressed on the MEGA65 (the power LED blinks green/yellow). This PC needs IPv6 on its network adapter."/>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource Card}">
@@ -433,6 +461,15 @@
             <StackPanel DockPanel.Dock="Top">
                 <TextBlock Text="SD Card Sync" Style="{StaticResource PageTitle}"/>
                 <TextBlock Style="{StaticResource PageSubtitle}" Text="Compare any package or folder with your card. Only approved files are written; replaced files are backed up; nothing is deleted."/>
+                <Expander Header="How to use this page" Style="{StaticResource PageHelp}">
+                    <StackPanel Margin="24,6,0,0" MaxWidth="900" HorizontalAlignment="Left">
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="What it does"/><Run Text=" – Copies a set of files (for example a release package or a game collection) onto an SD card in this PC's card reader, only changing what is different."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Package"/><Run Text=" – The files you want on the card: a downloaded .7z/.zip archive, or a folder."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="SD card"/><Run Text=" – The card in this PC's card reader."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Compare"/><Run Text=" – Lists every file as new, changed or the same. Nothing is written yet."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Review and apply"/><Run Text=" – Shows the changes for approval, backs up any file that will be replaced, then copies. Files are never deleted from the card."/></TextBlock>
+                    </StackPanel>
+                </Expander>
             </StackPanel>
             <ContentControl DockPanel.Dock="Bottom" Content="{Binding}" ContentTemplate="{StaticResource StatusFooter}"/>
             <Border DockPanel.Dock="Top" Style="{StaticResource Card}">
@@ -488,6 +525,14 @@
             <StackPanel DockPanel.Dock="Top">
                 <TextBlock Text="Disk &amp; ROM Tools" Style="{StaticResource PageTitle}"/>
                 <TextBlock Style="{StaticResource PageSubtitle}" Text="Work with D81 disk images and ROM files on this PC. No MEGA65 connection is needed."/>
+                <Expander Header="How to use this page" Style="{StaticResource PageHelp}">
+                    <StackPanel Margin="24,6,0,0" MaxWidth="900" HorizontalAlignment="Left">
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="D81 disk image"/><Run Text=' – A .D81 file is a virtual 3.5" floppy disk. Create one, put programs from your PC on it, or take files off it. Copy it to the SD card and mount it on the MEGA65 to use it like a real disk.'/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="ROM start-up settings"/><Run Text=" – The MEGA65 ROM remembers a few start-up choices: CPU speed, font and screen colours. Open a copy of your MEGA65.ROM, change them and save a new ROM file."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="ROM patch (.rdf)"/><Run Text=" – Some ROM changes are shared as small patch files instead of whole ROMs. Choose the patch and your ROM, and a patched copy is saved. Your original ROM is never changed."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Using the results"/><Run Text=" – Copy a new disk or ROM to the SD card with the SD Card Browser. To try a ROM without copying it, use ROM (temp) on the Device page."/></TextBlock>
+                    </StackPanel>
+                </Expander>
             </StackPanel>
             <ContentControl DockPanel.Dock="Bottom" Content="{Binding}" ContentTemplate="{StaticResource StatusFooter}"/>
             <TabControl>
@@ -645,6 +690,14 @@
         <StackPanel>
             <TextBlock Text="Device Tools" Style="{StaticResource PageTitle}"/>
             <TextBlock Style="{StaticResource PageSubtitle}" Text="The official MEGA65 command-line tools the Device page uses to talk to your MEGA65, downloaded from the Filehost."/>
+            <Expander Header="How to use this page" Style="{StaticResource PageHelp}">
+                <StackPanel Margin="24,6,0,0" MaxWidth="900" HorizontalAlignment="Left">
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Why they are needed"/><Run Text=" – MEGA65 GUI talks to the MEGA65 through the official MEGA65 tools (m65, mega65_ftp, etherload). They are downloaded once from the Filehost."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Install device tools"/><Run Text=" – Downloads the recommended (development) build, which has the newest fixes."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Install 1.00 release instead"/><Run Text=" – The older stable release. Some features, such as deleting folders on the card, do not work with it."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Use existing folder"/><Run Text=" – Use tools you already have on this PC instead of downloading them."/></TextBlock>
+                </StackPanel>
+            </Expander>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="{Binding InstalledText}" TextWrapping="Wrap" Margin="0,0,0,10"/>
@@ -679,49 +732,70 @@
         <DockPanel>
             <StackPanel DockPanel.Dock="Top">
                 <TextBlock Text="Features" Style="{StaticResource PageTitle}"/>
-                <TextBlock Text="{Binding Counts}" Style="{StaticResource PageSubtitle}"/>
+                <TextBlock Style="{StaticResource PageSubtitle}" Text="What MEGA65 GUI can do today, what still needs testing on a real MEGA65, and what is still to come."/>
+                <!-- Summary tiles -->
+                <ItemsControl ItemsSource="{Binding Groups}" Margin="0,0,0,8">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource Card}" Margin="0,0,8,8" Padding="14,10" MinWidth="150">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Glyph}" Style="{StaticResource Icon}" FontSize="20" Margin="0,0,10,0"
+                                               Foreground="{Binding Status, Converter={StaticResource StatusBrush}}"/>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Count}" FontSize="20" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Title}" Style="{StaticResource Muted}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
-            <Border Style="{StaticResource Card}" Padding="2" Margin="0">
-                <ListView ItemContainerStyle="{StaticResource CompactRow}" ItemsSource="{Binding View}" BorderThickness="0" Background="Transparent">
-                    <ListView.GroupStyle>
-                        <GroupStyle>
-                            <GroupStyle.HeaderTemplate>
-                                <DataTemplate><TextBlock Text="{Binding Name}" Style="{StaticResource SectionTitle}" Margin="8,10,0,2"/></DataTemplate>
-                            </GroupStyle.HeaderTemplate>
-                        </GroupStyle>
-                    </ListView.GroupStyle>
-                    <ListView.View>
-                        <GridView>
-                            <GridViewColumn Header="Feature" Width="350">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Margin="0,2">
-                                            <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
-                                            <TextBlock Text="{Binding Notes}" Style="{StaticResource Muted}" FontSize="11"
-                                                       Visibility="{Binding Notes, Converter={StaticResource NullToCollapsed}}"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Status" Width="140">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate><TextBlock Text="{Binding Status, Converter={StaticResource EnumLabel}}" Foreground="{Binding Status, Converter={StaticResource StatusBrush}}" FontWeight="SemiBold" FontSize="12"/></DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Connection" Width="120">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate><TextBlock Text="{Binding Connection}" FontSize="12" TextWrapping="Wrap"/></DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="How" Width="230">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate><TextBlock Text="{Binding Mechanism}" TextWrapping="Wrap" FontFamily="Cascadia Mono, Consolas" FontSize="11"/></DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                        </GridView>
-                    </ListView.View>
-                </ListView>
-            </Border>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Groups}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                        <TextBlock Text="{Binding Glyph}" Style="{StaticResource Icon}" FontSize="16" Margin="0,0,8,0"
+                                                   Foreground="{Binding Status, Converter={StaticResource StatusBrush}}"/>
+                                        <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Count, StringFormat=' ({0})'}" FontSize="15" Style="{StaticResource Muted}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Description}" Style="{StaticResource Muted}" Margin="24,0,0,8"/>
+                                    <ItemsControl ItemsSource="{Binding Items}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,3" ToolTip="{Binding Mechanism, StringFormat='How: {0}'}">
+                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="24"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding DataContext.Glyph, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Style="{StaticResource Icon}" FontSize="12"
+                                                               VerticalAlignment="Top" Margin="0,3,0,0"
+                                                               Foreground="{Binding Status, Converter={StaticResource StatusBrush}}"/>
+                                                    <StackPanel Grid.Column="1">
+                                                        <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
+                                                        <TextBlock Text="{Binding Notes}" Style="{StaticResource Muted}" FontSize="11.5"
+                                                                   Visibility="{Binding Notes, Converter={StaticResource NullToCollapsed}}"/>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,0,0,0">
+                                                        <Border CornerRadius="4" Padding="6,1" Margin="0,0,4,0" Background="{DynamicResource SubtleFillColorSecondaryBrush}">
+                                                            <TextBlock Text="{Binding Area}" FontSize="11"/>
+                                                        </Border>
+                                                        <Border CornerRadius="4" Padding="6,1" Background="{DynamicResource SubtleFillColorSecondaryBrush}">
+                                                            <TextBlock Text="{Binding Connection}" FontSize="11"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
         </DockPanel>
     </DataTemplate>
 </ResourceDictionary>
