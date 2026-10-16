@@ -41,7 +41,7 @@ public static class FeatureCatalog
 
         // Transfers
         new("Transfer", "PRG send and run", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "m65 -F [-4] [-r] / etherload -i [-r]", "Verified by the hardware self-test on an R6 2026-10-16"),
-        new("Transfer", "SID send", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -F -4 -r file.sid", "Implemented; untested on hardware"),
+        new("Transfer", "SID send", FeatureStatus.Implemented, "USB/JTAG", "m65 -F -4 -r file.sid", "Verified on an R6 2026-10-16 (PSID v2, The Last Ninja): plays in C64 mode, keys 1-9 pick the song"),
         new("Transfer", "BIT load (volatile)", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -q", "Lost at power-off; uses m65's built-in JTAG loader"),
         new("Transfer", "HIC (HICKUP) load", FeatureStatus.Implemented, "USB/JTAG", "m65 -F -k", "Verified by the extended hardware self-test on an R6 2026-10-16"),
         new("Transfer", "ROM load (volatile)", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "m65 -F -R / etherload -R", "Verified by the extended hardware self-test on an R6 2026-10-16"),

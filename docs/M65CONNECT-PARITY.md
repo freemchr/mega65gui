@@ -47,7 +47,7 @@ The in-app **Features** page shows the same list from `src/Mega65Gui.Core/Featur
 | Connection | Device state readout (model, core, ROM) | Partial | Monitor `h`, `mffd3629 1`, `m20016` | Implemented (verified on an R6) |
 | Connection | Ethernet discovery and connection | `etherload -D` | `etherload -D`, `-i` | Hardware unverified |
 | Transfer | PRG send and run | Yes (J, E) | `m65 -F [-4] [-r] f.prg`, `etherload -i ip [-4/-5] [-r] f.prg` | Implemented (verified by the hardware self-test on an R6) |
-| Transfer | SID send | Yes (J) | `m65 -F -4 -r f.sid` | Hardware unverified |
+| Transfer | SID send | Yes (J) | `m65 -F -4 -r f.sid` | Implemented (verified on an R6) |
 | Transfer | BIT load (volatile) | Yes (J) | `m65 -b` / `-q` | Hardware unverified |
 | Transfer | HIC (HICKUP) load | Yes (J) | `m65 -k` | Implemented (verified by the hardware self-test on an R6) |
 | Transfer | ROM load (volatile) | Yes (J, E) | `m65 -R`, `etherload -R` | Implemented (verified by the hardware self-test on an R6) |
