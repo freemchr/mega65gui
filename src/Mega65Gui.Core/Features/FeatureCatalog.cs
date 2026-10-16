@@ -43,8 +43,8 @@ public static class FeatureCatalog
         new("Transfer", "PRG send and run", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "m65 -F [-4] [-r] / etherload -i [-r]", "Verified by the hardware self-test on an R6 2026-10-16"),
         new("Transfer", "SID send", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -F -4 -r file.sid", "Implemented; untested on hardware"),
         new("Transfer", "BIT load (volatile)", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -q", "Lost at power-off; uses m65's built-in JTAG loader"),
-        new("Transfer", "HIC (HICKUP) load", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -F -k", ""),
-        new("Transfer", "ROM load (volatile)", FeatureStatus.HardwareUnverified, "USB/JTAG, Ethernet", "m65 -F -R / etherload -R", "User-supplied ROM files only; lost at power-off"),
+        new("Transfer", "HIC (HICKUP) load", FeatureStatus.Implemented, "USB/JTAG", "m65 -F -k", "Verified by the extended hardware self-test on an R6 2026-10-16"),
+        new("Transfer", "ROM load (volatile)", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "m65 -F -R / etherload -R", "Verified by the extended hardware self-test on an R6 2026-10-16"),
         new("Transfer", "BASIC program text transfer", FeatureStatus.Implemented, "USB/JTAG", "m65 -T - (stdin)", "Verified by the hardware self-test on an R6 2026-10-16"),
         new("Transfer", "Drag-and-drop routing by file type", FeatureStatus.HardwareUnverified, "Any", "UI", "PRG, SID, BASIC text, ROM, BIT, HICKUP on the Device page; files onto the card in the SD Card Browser"),
         new("Transfer", "PRG autoload folder watch", FeatureStatus.HardwareUnverified, "USB/JTAG, Ethernet", "UI", "Sends each changed .prg in a watched folder"),
@@ -58,11 +58,11 @@ public static class FeatureCatalog
         // Device control
         new("Control", "Reset", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "m65 -F / etherload -5", "Verified by the hardware self-test on an R6 2026-10-16"),
         new("Control", "C64 / MEGA65 mode switching", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "m65 -F -4 / etherload --c64mode --m65mode", "Verified by the hardware self-test on an R6 2026-10-16"),
-        new("Control", "Start a core from a flash slot", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -Z", "Nothing is written to flash"),
+        new("Control", "Start a core from a flash slot", FeatureStatus.Implemented, "USB/JTAG", "m65 -Z", "Verified by the extended hardware self-test on an R6 2026-10-16"),
         new("Control", "PAL / NTSC", FeatureStatus.HardwareUnverified, "USB/JTAG, Ethernet", "m65 -p/-n; etherload --pal/--ntsc", ""),
-        new("Control", "Screenshot capture", FeatureStatus.HardwareUnverified, "USB/JTAG", "m65 -S<file>", "Not available over Ethernet"),
+        new("Control", "Screenshot capture", FeatureStatus.Implemented, "USB/JTAG", "m65 -S<file>", "Verified by the extended hardware self-test on an R6 2026-10-16"),
         new("Control", "Remote keyboard", FeatureStatus.Implemented, "USB/JTAG", "Serial monitor sffd3615", "Verified by the hardware self-test on an R6 2026-10-16"),
-        new("Control", "Monitor terminal", FeatureStatus.HardwareUnverified, "USB/JTAG", "Serial monitor, 2 Mbaud", "Terminal page"),
+        new("Control", "Monitor terminal", FeatureStatus.Implemented, "USB/JTAG", "Serial monitor, 2 Mbaud", "Verified by the extended hardware self-test on an R6 2026-10-16"),
 
         // Offline tools
         new("Disk images", "D81 create, list, add, extract, delete, rename", FeatureStatus.Implemented, "None", "Native", "Checked against a real public D81; tested round trips"),

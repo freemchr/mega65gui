@@ -46,7 +46,10 @@ public partial class App : Application
         try
         {
             var tools = services.Tools.Current ?? throw new InvalidOperationException("Device tools are not installed.");
-            var results = await new Mega65Gui.Core.Device.HardwareSelfTest(tools, services.Runner, port).RunAsync();
+            var test = new Mega65Gui.Core.Device.HardwareSelfTest(tools, services.Runner, port);
+            var results = Environment.GetCommandLineArgs().Contains("--extended")
+                ? await RunExtendedAsync(test, services)
+                : await test.RunAsync();
             foreach (var r in results) report.AppendLine($"{(r.Passed ? "PASS" : "FAIL")}  {r.Name}  ({r.Detail})");
             report.AppendLine($"\n{results.Count(r => r.Passed)} passed, {results.Count(r => !r.Passed)} failed");
             exitCode = results.All(r => r.Passed) ? 0 : 1;
@@ -56,6 +59,17 @@ public partial class App : Application
         await File.WriteAllTextAsync(file, report.ToString());
         await File.WriteAllTextAsync(Path.Combine(services.Paths.Reports, "selftest-latest.txt"), report.ToString());
         Shutdown(exitCode);
+    }
+
+    /// <summary>Extended checks use the ROM and HICKUP from the newest extracted release package.</summary>
+    private static async Task<IReadOnlyList<Mega65Gui.Core.Device.SelfTestResult>> RunExtendedAsync(Mega65Gui.Core.Device.HardwareSelfTest test, AppServices services)
+    {
+        var rom = Directory.EnumerateFiles(services.Paths.Extracted, "MEGA65.ROM", SearchOption.AllDirectories)
+            .OrderByDescending(File.GetLastWriteTime).FirstOrDefault() ?? throw new FileNotFoundException("No release package with MEGA65.ROM has been downloaded yet.");
+        var pkg = Path.GetDirectoryName(Path.GetDirectoryName(rom))!;
+        var hickup = Path.Combine(pkg, "extra", "HICKUP.M65");
+        var shot = Path.Combine(services.Paths.Reports, "selftest-screenshot.png");
+        return await test.RunExtendedAsync(rom, hickup, shot);
     }
 
     private async Task RenderPagesAsync(Window window, MainViewModel vm, string folder)

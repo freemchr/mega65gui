@@ -76,6 +76,65 @@ public sealed partial class HardwareSelfTest(ToolInstallation tools, IProcessRun
     }
 
     /// <summary>Upload, list, download, compare and delete one file in the card's root (works with every tools version).</summary>
+    /// <summary>
+    /// Further checks that leave the MEGA65 as it was: the monitor terminal, a PNG screenshot, the
+    /// release's own ROM loaded temporarily, the same HICKUP, and restarting the slot 1 core.
+    /// </summary>
+    public async Task<IReadOnlyList<SelfTestResult>> RunExtendedAsync(string romPath, string hickupPath, string screenshotPath,
+        IProgress<SelfTestResult>? progress = null, CancellationToken ct = default)
+    {
+        var results = new List<SelfTestResult>();
+        async Task Step(string name, Func<Task<(bool, string)>> body)
+        {
+            SelfTestResult r;
+            try { var (ok, detail) = await body(); r = new(name, ok, detail); }
+            catch (Exception e) when (e is not OperationCanceledException) { r = new(name, false, e.Message); }
+            results.Add(r);
+            progress?.Report(r);
+        }
+        var before = await new DeviceProbe().ProbeAsync(_target, ct);
+
+        await Step("Terminal: monitor answers 'h'", async () =>
+        {
+            var text = new StringBuilder();
+            using (var mon = MonitorConnection.Open(port))
+            {
+                mon.Received += s => { lock (text) text.Append(s); };
+                await mon.SendCommandAsync("h", ct);
+                await Task.Delay(1500, ct);
+            }
+            string got; lock (text) got = text.ToString();
+            return (got.Contains("MEGA65 Serial Monitor", StringComparison.OrdinalIgnoreCase), $"{got.Length} characters received");
+        });
+        await Step("Screenshot to PNG", async () =>
+        {
+            File.Delete(screenshotPath);
+            var r = await _cmds.ScreenshotAsync(_target, screenshotPath, ct);
+            var size = File.Exists(screenshotPath) ? new FileInfo(screenshotPath).Length : 0;
+            return (r.Succeeded && size > 1000, $"{size:N0} bytes");
+        });
+        await Step("Start with a ROM from the PC (same version)", async () =>
+        {
+            var r = await _cmds.LoadRomAsync(_target, romPath, ct);
+            var ready = await WaitForScreenAsync("BASIC 65", ct);
+            var after = await new DeviceProbe().ProbeAsync(_target, ct);
+            return (r.Succeeded && ready && after.RomVersion == before.RomVersion, $"ROM now {after.RomVersion}");
+        });
+        await Step("Load HICKUP (same version)", async () =>
+        {
+            var r = await _cmds.LoadHickupAsync(_target, hickupPath, ct);
+            return (r.Succeeded && await WaitForScreenAsync("BASIC 65", ct), $"exit {r.ExitCode}");
+        });
+        await Step("Start flash slot 1 (the running core)", async () =>
+        {
+            var r = await _cmds.BootSlotAsync(_target, 1, ct);
+            await Task.Delay(8000, ct);
+            var after = await new DeviceProbe().ProbeAsync(_target, ct);
+            return (r.Succeeded && after.CoreBuild == before.CoreBuild, $"core now {after.CoreBuild}");
+        });
+        return results;
+    }
+
     private async Task<(bool, string)> CardRoundTripAsync(CancellationToken ct)
     {
         const string name = "M65GTEST.TXT";
