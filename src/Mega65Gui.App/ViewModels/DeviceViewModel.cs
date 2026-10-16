@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using Mega65Gui.App.Services;
 using Mega65Gui.Core.Common;
 using Mega65Gui.Core.Device;
+using System.IO;
 using Microsoft.Win32;
 
 namespace Mega65Gui.App.ViewModels;
@@ -174,11 +175,142 @@ public sealed partial class DeviceViewModel : PageViewModel
     /// <summary>Drag-and-drop entry point; routes by file type.</summary>
     public Task SendFileAsync(string path)
     {
-        if (Path.GetExtension(path).Equals(".prg", StringComparison.OrdinalIgnoreCase))
-            return RunToolAsync((c, t) => c.SendPrgAsync(t, path, RunAfterLoad, C64Mode), $"Sending {Path.GetFileName(path)}…");
-        Status = $"{Path.GetExtension(path)} files are not supported yet. See the Features page.";
-        return Task.CompletedTask;
+        var name = Path.GetFileName(path);
+        switch (Path.GetExtension(path).ToLowerInvariant())
+        {
+            case ".prg":
+                return RunToolAsync((c, t) => c.SendPrgAsync(t, path, RunAfterLoad, C64Mode), $"Sending {name}…");
+            case ".sid":
+                return RunToolAsync((c, t) => c.SendSidAsync(t, path), $"Playing {name}…");
+            case ".bas" or ".txt" or ".lst":
+                return TypeBasicFileAsync(path);
+            case ".rom" or ".bin":
+                return LoadRomFileAsync(path);
+            case ".bit":
+                return LoadBitFileAsync(path);
+            case ".m65" when name.Contains("HICKUP", StringComparison.OrdinalIgnoreCase):
+                return RunToolAsync((c, t) => c.LoadHickupAsync(t, path), $"Loading {name}…");
+            case ".d81" or ".d64" or ".cor":
+                Status = $"{name}: use the SD Card Browser to copy it to the MEGA65's card.";
+                return Task.CompletedTask;
+            default:
+                Status = $"{name}: this file type is not supported. Drop PRG, SID, BASIC text (.bas/.txt), ROM, BIT or HICKUP.M65 files.";
+                return Task.CompletedTask;
+        }
     }
+
+    private static string? Pick(string title, string filter)
+    {
+        var dlg = new OpenFileDialog { Title = title, Filter = filter };
+        return dlg.ShowDialog() == true ? dlg.FileName : null;
+    }
+
+    private static bool Confirm(string title, string message) =>
+        System.Windows.MessageBox.Show(System.Windows.Application.Current.MainWindow, message, title,
+            System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question) == System.Windows.MessageBoxResult.Yes;
+
+    [RelayCommand]
+    private Task SendSidAsync() => Pick("Play a SID tune", "SID tunes (*.sid)|*.sid") is { } f ? SendFileAsync(f) : Task.CompletedTask;
+
+    [RelayCommand]
+    private Task TypeBasicAsync() => Pick("Type a BASIC listing", "BASIC text (*.bas;*.txt;*.lst)|*.bas;*.txt;*.lst|All files|*.*") is { } f ? TypeBasicFileAsync(f) : Task.CompletedTask;
+
+    private Task TypeBasicFileAsync(string path)
+    {
+        var text = File.ReadAllText(path);
+        var lines = text.Split('\n').Count(l => l.Trim().Length > 0);
+        if (!Confirm("Type BASIC listing", $"Type {lines} line(s) from {Path.GetFileName(path)} into the MEGA65?\n\n" +
+                     "The MEGA65 should be at the READY prompt. Lines are typed as if on the keyboard, so this takes a moment."))
+            return Task.CompletedTask;
+        return RunToolAsync((c, t) => c.TypeBasicAsync(t, text), $"Typing {Path.GetFileName(path)}…");
+    }
+
+    [RelayCommand]
+    private Task LoadRomAsync() => Pick("Start with a ROM from this PC", "MEGA65 ROMs (*.rom;*.bin)|*.rom;*.bin") is { } f ? LoadRomFileAsync(f) : Task.CompletedTask;
+
+    private Task LoadRomFileAsync(string path) =>
+        Confirm("Start with this ROM", $"Restart the MEGA65 using {Path.GetFileName(path)}?\n\nThe ROM is loaded from this PC only; the SD card is not changed and the normal ROM returns at the next power-on.")
+            ? RunToolAsync((c, t) => c.LoadRomAsync(t, path), $"Starting with {Path.GetFileName(path)}…")
+            : Task.CompletedTask;
+
+    [RelayCommand]
+    private Task LoadBitAsync() => Pick("Load an FPGA bitstream", "Bitstreams (*.bit)|*.bit") is { } f ? LoadBitFileAsync(f) : Task.CompletedTask;
+
+    private Task LoadBitFileAsync(string path) =>
+        Confirm("Load bitstream", $"Load {Path.GetFileName(path)} into the FPGA?\n\nThis replaces the running core until the MEGA65 is switched off. Nothing is written to flash.")
+            ? RunToolAsync((c, t) => c.LoadBitstreamAsync(t, path), $"Loading {Path.GetFileName(path)} into the FPGA…")
+            : Task.CompletedTask;
+
+    [RelayCommand]
+    private Task LoadHickupAsync() => Pick("Load HICKUP (hypervisor)", "HICKUP (HICKUP.M65)|*.m65") is { } f
+        ? RunToolAsync((c, t) => c.LoadHickupAsync(t, f), $"Loading {Path.GetFileName(f)}…")
+        : Task.CompletedTask;
+
+    [RelayCommand] private Task SetPalAsync() => RunToolAsync((c, t) => c.SetVideoModeAsync(t, pal: true), "Switching to PAL…");
+    [RelayCommand] private Task SetNtscAsync() => RunToolAsync((c, t) => c.SetVideoModeAsync(t, pal: false), "Switching to NTSC…");
+
+    public IReadOnlyList<int> Slots { get; } = [0, 1, 2, 3, 4, 5, 6, 7];
+    [ObservableProperty] private int _selectedSlot = 1;
+
+    [RelayCommand]
+    private async Task BootSlotAsync()
+    {
+        var slot = SelectedSlot;
+        if (!Confirm("Start flash slot", $"Restart the MEGA65 from the core in slot {slot}?{(slot == 0 ? " Slot 0 is the factory core." : "")}\n\nNothing is written to flash."))
+            return;
+        await RunToolAsync((c, t) => c.BootSlotAsync(t, slot), $"Starting slot {slot}…");
+        // The new core takes a few seconds to start; read it again so the page shows what is running.
+        if (services.Connection is { Kind: ConnectionKind.Serial } conn)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(5));
+            await GuardAsync(async () => { await services.ConnectSerialAsync(conn.Address); Status = $"Slot {slot} started."; }, "Reading the new core…");
+        }
+    }
+
+    // ---- PRG autoload: send a program whenever it changes in a watched folder ----
+
+    [ObservableProperty] private string? _autoloadFolder;
+    [ObservableProperty] private bool _autoloadEnabled;
+    private FileSystemWatcher? _watcher;
+    private readonly Dictionary<string, DateTime> _lastSent = new(StringComparer.OrdinalIgnoreCase);
+
+    [RelayCommand]
+    private void BrowseAutoload()
+    {
+        var dlg = new OpenFolderDialog { Title = "Folder to watch for .prg files" };
+        if (dlg.ShowDialog() == true) AutoloadFolder = dlg.FolderName;
+    }
+
+    partial void OnAutoloadFolderChanged(string? value) { if (AutoloadEnabled) StartWatching(); }
+    partial void OnAutoloadEnabledChanged(bool value) { if (value) StartWatching(); else StopWatching(); }
+
+    private void StartWatching()
+    {
+        StopWatching();
+        if (AutoloadFolder is null || !Directory.Exists(AutoloadFolder)) { Status = "Choose a folder to watch first."; AutoloadEnabled = false; return; }
+        _watcher = new FileSystemWatcher(AutoloadFolder, "*.prg") { NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName, EnableRaisingEvents = true };
+        _watcher.Changed += OnPrgChanged;
+        _watcher.Created += OnPrgChanged;
+        _watcher.Renamed += OnPrgChanged;
+        Status = $"Watching {AutoloadFolder}: changed .prg files are sent to the MEGA65 automatically.";
+    }
+
+    private void StopWatching()
+    {
+        _watcher?.Dispose();
+        _watcher = null;
+    }
+
+    private void OnPrgChanged(object sender, FileSystemEventArgs e) =>
+        System.Windows.Application.Current.Dispatcher.BeginInvoke(async () =>
+        {
+            // Builds write files in several steps; wait until it settles and send each change once.
+            await Task.Delay(700);
+            if (_lastSent.TryGetValue(e.FullPath, out var t) && DateTime.Now - t < TimeSpan.FromSeconds(2)) return;
+            if (IsBusy || services.Connection is null || !File.Exists(e.FullPath)) return;
+            _lastSent[e.FullPath] = DateTime.Now;
+            await SendFileAsync(e.FullPath);
+        });
 
     [RelayCommand]
     private Task ScreenshotAsync()

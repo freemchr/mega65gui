@@ -12,13 +12,13 @@ public sealed record ProcessResult(int ExitCode, string StdOut, string StdErr, T
 public interface IProcessRunner
 {
     Task<ProcessResult> RunAsync(string fileName, IReadOnlyList<string> args, TimeSpan timeout,
-        IProgress<string>? output = null, CancellationToken ct = default, string? workingDirectory = null);
+        IProgress<string>? output = null, CancellationToken ct = default, string? workingDirectory = null, string? standardInput = null);
 }
 
 public sealed class ProcessRunner : IProcessRunner
 {
     public async Task<ProcessResult> RunAsync(string fileName, IReadOnlyList<string> args, TimeSpan timeout,
-        IProgress<string>? output = null, CancellationToken ct = default, string? workingDirectory = null)
+        IProgress<string>? output = null, CancellationToken ct = default, string? workingDirectory = null, string? standardInput = null)
     {
         var psi = new ProcessStartInfo(fileName)
         {
@@ -40,6 +40,7 @@ public sealed class ProcessRunner : IProcessRunner
 
         var sw = Stopwatch.StartNew();
         proc.Start();
+        if (standardInput is not null) await proc.StandardInput.WriteAsync(standardInput);
         proc.StandardInput.Close();
         proc.BeginOutputReadLine();
         proc.BeginErrorReadLine();

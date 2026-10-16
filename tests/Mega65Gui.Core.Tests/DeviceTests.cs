@@ -74,6 +74,36 @@ public class DeviceTests
     }
 
     [Fact]
+    public void BuildsTransferArguments()
+    {
+        var com = ConnectionTarget.Serial("COM3");
+        var eth = ConnectionTarget.Ethernet("fe80::1%eth0");
+        string[] serial = ["-l", "COM3", "-s", "2000000"];
+
+        Assert.Equal([.. serial, "-F", "-4", "-r", "tune.sid"], Mega65Commands.SendSidArgs(com, "tune.sid").Args);
+        Assert.Equal([.. serial, "-q", "core.bit"], Mega65Commands.LoadBitstreamArgs(com, "core.bit").Args);
+        Assert.Equal([.. serial, "-F", "-k", "HICKUP.M65"], Mega65Commands.LoadHickupArgs(com, "HICKUP.M65").Args);
+        Assert.Equal([.. serial, "-F", "-R", "MEGA65.ROM"], Mega65Commands.LoadRomArgs(com, "MEGA65.ROM").Args);
+        var (romTool, romArgs) = Mega65Commands.LoadRomArgs(eth, "MEGA65.ROM");
+        Assert.Equal("etherload", romTool);
+        Assert.Equal(["-i", "fe80::1%eth0", "-R", "MEGA65.ROM"], romArgs);
+        Assert.Equal([.. serial, "-n"], Mega65Commands.VideoModeArgs(com, pal: false).Args);
+        Assert.Equal(["-i", "fe80::1%eth0", "-5", "--pal"], Mega65Commands.VideoModeArgs(eth, pal: true).Args);
+        Assert.Equal([.. serial, "-Z", "1"], Mega65Commands.BootSlotArgs(com, 1).Args);
+        Assert.Equal([.. serial, "-T", "-"], Mega65Commands.TypeTextArgs(com).Args);
+
+        Assert.Throws<NotSupportedException>(() => Mega65Commands.SendSidArgs(eth, "x.sid"));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Mega65Commands.BootSlotArgs(com, 8));
+    }
+
+    [Fact]
+    public void PreparesBasicListingForTyping()
+    {
+        Assert.Equal("10 print \"hello\"\n20 goto 10\n.\n",
+            Mega65Commands.PrepareBasicListing("10 PRINT \"HELLO\"\r\n\r\n20 GOTO 10   \r\n.\r\n"));
+    }
+
+    [Fact]
     public void DetectsYesOptionFromHelpText()
     {
         Assert.True(Mega65Commands.HelpListsYesOption("  -c - execute command\n  -y - don't ask for confirmation before executing commands.\n"));

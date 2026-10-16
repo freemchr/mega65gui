@@ -43,6 +43,51 @@ public sealed class Mega65Commands(ToolInstallation tools, IProcessRunner runner
         _ => throw new InvalidOperationException("Not connected."),
     };
 
+    private static (string Tool, List<string> Args) SerialOnly(ConnectionTarget t, string what, params string[] args) =>
+        t.Kind == ConnectionKind.Serial ? ("m65", [.. SerialArgs(t), .. args]) : throw new NotSupportedException($"{what} is only available over USB/JTAG.");
+
+    /// <summary>Plays a SID tune with m65's built-in player (C64 mode).</summary>
+    public static (string Tool, List<string> Args) SendSidArgs(ConnectionTarget t, string sid) => SerialOnly(t, "Playing SID files", "-F", "-4", "-r", sid);
+
+    /// <summary>Loads an FPGA bitstream until power-off. "-q" uses m65's built-in JTAG loader (no Vivado).</summary>
+    public static (string Tool, List<string> Args) LoadBitstreamArgs(ConnectionTarget t, string bit) => SerialOnly(t, "Loading a bitstream", "-q", bit);
+
+    /// <summary>Replaces the hypervisor (HICKUP) until the next reset.</summary>
+    public static (string Tool, List<string> Args) LoadHickupArgs(ConnectionTarget t, string hickup) => SerialOnly(t, "Loading HICKUP", "-F", "-k", hickup);
+
+    /// <summary>Starts the MEGA65 with a ROM file from the PC (not stored on the card; lost at power-off).</summary>
+    public static (string Tool, List<string> Args) LoadRomArgs(ConnectionTarget t, string rom) => t.Kind switch
+    {
+        ConnectionKind.Serial => ("m65", [.. SerialArgs(t), "-F", "-R", rom]),
+        ConnectionKind.Ethernet => ("etherload", ["-i", t.Address, "-R", rom]),
+        _ => throw new InvalidOperationException("Not connected."),
+    };
+
+    public static (string Tool, List<string> Args) VideoModeArgs(ConnectionTarget t, bool pal) => t.Kind switch
+    {
+        ConnectionKind.Serial => ("m65", [.. SerialArgs(t), pal ? "-p" : "-n"]),
+        ConnectionKind.Ethernet => ("etherload", ["-i", t.Address, "-5", pal ? "--pal" : "--ntsc"]),
+        _ => throw new InvalidOperationException("Not connected."),
+    };
+
+    /// <summary>Restarts the FPGA from a core already stored in flash (nothing is written to flash).</summary>
+    public static (string Tool, List<string> Args) BootSlotArgs(ConnectionTarget t, int slot) =>
+        slot is >= 0 and <= 7 ? SerialOnly(t, "Starting a flash slot", "-Z", slot.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                              : throw new ArgumentOutOfRangeException(nameof(slot));
+
+    /// <summary>Types text via the virtual keyboard, one line at a time with RETURN ("-T -" reads stdin until ".").</summary>
+    public static (string Tool, List<string> Args) TypeTextArgs(ConnectionTarget t) => SerialOnly(t, "Typing text", "-T", "-");
+
+    /// <summary>
+    /// Prepares a BASIC listing for typing: blank lines dropped and letters lowercased, because
+    /// lowercase keys produce BASIC keywords in the MEGA65's default character set.
+    /// </summary>
+    public static string PrepareBasicListing(string text) =>
+        string.Join("\n", text.Replace("\r", "").Split('\n')
+            .Select(l => l.TrimEnd())
+            .Where(l => l.Length > 0 && l != ".")
+            .Select(l => l.ToLowerInvariant())) + "\n.\n";
+
     public static (string Tool, List<string> Args) ScreenshotArgs(ConnectionTarget t, string pngPath) => t.Kind == ConnectionKind.Serial
         ? ("m65", [.. SerialArgs(t), "-S" + pngPath])
         : throw new NotSupportedException("Screenshots are only available over USB/JTAG.");
@@ -86,6 +131,19 @@ public sealed class Mega65Commands(ToolInstallation tools, IProcessRunner runner
     public Task<ProcessResult> SetModeAsync(ConnectionTarget t, MachineMode m, CancellationToken ct = default) => Run(ModeArgs(t, m), Short, ct);
     public Task<ProcessResult> SendPrgAsync(ConnectionTarget t, string prg, bool run, bool c64, CancellationToken ct = default) => Run(SendPrgArgs(t, prg, run, c64), Long, ct);
     public Task<ProcessResult> ScreenshotAsync(ConnectionTarget t, string png, CancellationToken ct = default) => Run(ScreenshotArgs(t, png), Short, ct);
+    public Task<ProcessResult> SendSidAsync(ConnectionTarget t, string sid, CancellationToken ct = default) => Run(SendSidArgs(t, sid), Long, ct);
+    public Task<ProcessResult> LoadBitstreamAsync(ConnectionTarget t, string bit, CancellationToken ct = default) => Run(LoadBitstreamArgs(t, bit), Long, ct);
+    public Task<ProcessResult> LoadHickupAsync(ConnectionTarget t, string file, CancellationToken ct = default) => Run(LoadHickupArgs(t, file), Long, ct);
+    public Task<ProcessResult> LoadRomAsync(ConnectionTarget t, string rom, CancellationToken ct = default) => Run(LoadRomArgs(t, rom), Long, ct);
+    public Task<ProcessResult> SetVideoModeAsync(ConnectionTarget t, bool pal, CancellationToken ct = default) => Run(VideoModeArgs(t, pal), Short, ct);
+    public Task<ProcessResult> BootSlotAsync(ConnectionTarget t, int slot, CancellationToken ct = default) => Run(BootSlotArgs(t, slot), Long, ct);
+
+    public Task<ProcessResult> TypeBasicAsync(ConnectionTarget t, string listing, CancellationToken ct = default)
+    {
+        var (tool, args) = TypeTextArgs(t);
+        var exe = tools.PathOf(tool) ?? throw new FileNotFoundException($"{tool} is not installed.");
+        return runner.RunAsync(exe, args, Long, null, ct, null, PrepareBasicListing(listing));
+    }
 
     public async Task<ProcessResult> RemoteSdAsync(ConnectionTarget t, IProgress<string>? output, CancellationToken ct, params string[] commands) =>
         await Run(FtpArgs(t, await FtpSupportsYesAsync(ct), commands), Long, ct, output);
