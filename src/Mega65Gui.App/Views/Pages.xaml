@@ -58,7 +58,10 @@
                             </Style>
                         </Grid.Style>
                         <TextBox Text="{Binding SdCardPath, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0" ToolTip="The card's drive or a folder with a copy of it"/>
-                        <Button Grid.Column="1" Content="Browse…" Command="{Binding BrowseSdCardCommand}"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Content="Browse…" Command="{Binding BrowseSdCardCommand}" Margin="0,0,6,0"/>
+                            <Button Content="Eject" Command="{Binding EjectCardCommand}" ToolTip="Safely eject the SD card from this PC's card reader"/>
+                        </StackPanel>
                     </Grid>
                     <TextBlock Grid.Row="1" Grid.ColumnSpan="6" Margin="0,8,0,0" Style="{StaticResource Muted}"
                                Text="The card inside the MEGA65 is updated over the connection: its files are backed up to this PC first, only approved changes are uploaded, and every upload is read back and checked."
@@ -294,7 +297,8 @@
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="PAL / NTSC"/><Run Text=" – Switches the video mode. Your screen may go blank for a moment while it re-syncs."/></TextBlock>
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Start slot"/><Run Text=" – Restarts the MEGA65 from a core already stored in one of its flash slots. Nothing is written to flash."/></TextBlock>
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Run hardware self-test"/><Run Text=" – Checks that connecting, typing, loading programs and the SD card all work. It leaves the machine as it found it."/></TextBlock>
-                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="PRG autoload"/><Run Text=" – For programmers: choose a folder and press Watch, and every .prg you build there is sent to the MEGA65 and run straight away."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Run unit tests"/><Run Text=" – For programmers: runs a test program that reports its results to the PC (the official m65 unit-test mode) and shows how many tests passed or failed. A log is saved in the reports folder."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="PRG autoload"/><Run Text=" – For programmers: choose a folder and press Watch, and every .prg you build there is sent to the MEGA65 and run straight away."/></TextBlock>
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Remote SD card"/><Run Text=" – Type mega65_ftp commands (dir, get, put…) for the card inside the MEGA65. The SD Card Browser does the same with buttons."/></TextBlock>
                     </StackPanel>
                 </Expander>
@@ -400,8 +404,12 @@
                                     <ComboBox Grid.Column="1" ItemsSource="{Binding Slots}" SelectedItem="{Binding SelectedSlot}" Margin="0,0,6,0"/>
                                     <Button Grid.Column="2" Content="Start slot" Command="{Binding BootSlotCommand}" ToolTip="Restart the FPGA from a core already in flash (nothing is written)"/>
                                 </Grid>
-                                <Button Content="Run hardware self-test" Command="{Binding SelfTestCommand}" HorizontalAlignment="Left" Margin="0,0,0,10"
-                                        ToolTip="Checks reset, BASIC typing, remote keyboard, PRG, C64/MEGA65 modes and the SD card on your MEGA65"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <Button Content="Run hardware self-test" Command="{Binding SelfTestCommand}" Margin="0,0,6,0"
+                                            ToolTip="Checks reset, BASIC typing, remote keyboard, PRG, C64/MEGA65 modes and the SD card on your MEGA65"/>
+                                    <Button Content="Run unit tests…" Command="{Binding RunUnitTestCommand}"
+                                            ToolTip="For programmers: run a test program that reports PASS/FAIL results through $D643 (m65 unit-test mode)"/>
+                                </StackPanel>
                                 <TextBlock Text="PRG autoload" Style="{StaticResource SectionTitle}" Margin="0,4,0,4"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -467,7 +475,8 @@
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Package"/><Run Text=" – The files you want on the card: a downloaded .7z/.zip archive, or a folder."/></TextBlock>
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="SD card"/><Run Text=" – The card in this PC's card reader."/></TextBlock>
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Compare"/><Run Text=" – Lists every file as new, changed or the same. Nothing is written yet."/></TextBlock>
-                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Review and apply"/><Run Text=" – Shows the changes for approval, backs up any file that will be replaced, then copies. Files are never deleted from the card."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Eject"/><Run Text=" – Safely ejects the card from the card reader when you are done, so it can go back into the MEGA65."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Review and apply"/><Run Text=" – Shows the changes for approval, backs up any file that will be replaced, then copies. Files are never deleted from the card."/></TextBlock>
                     </StackPanel>
                 </Expander>
             </StackPanel>
@@ -484,7 +493,10 @@
                     </StackPanel>
                     <TextBlock Grid.Row="1" Text="SD card" Style="{StaticResource Label}"/>
                     <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SdCardPath, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0"/>
-                    <Button Grid.Row="1" Grid.Column="2" Content="Browse…" Command="{Binding BrowseSdCardCommand}" HorizontalAlignment="Left"/>
+                    <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal">
+                        <Button Content="Browse…" Command="{Binding BrowseSdCardCommand}" Margin="0,0,6,0"/>
+                        <Button Content="Eject" Command="{Binding EjectCardCommand}" ToolTip="Safely eject the SD card from this PC's card reader"/>
+                    </StackPanel>
                     <DockPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,10,0,0">
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                             <Button Content="Compare" Command="{Binding CompareCommand}" Margin="0,0,6,0"/>
@@ -524,13 +536,14 @@
         <DockPanel>
             <StackPanel DockPanel.Dock="Top">
                 <TextBlock Text="Disk &amp; ROM Tools" Style="{StaticResource PageTitle}"/>
-                <TextBlock Style="{StaticResource PageSubtitle}" Text="Work with D81 disk images and ROM files on this PC. No MEGA65 connection is needed."/>
+                <TextBlock Style="{StaticResource PageSubtitle}" Text="Work with D81 disk images, ROM files and core files on this PC. No MEGA65 connection is needed."/>
                 <Expander Header="How to use this page" Style="{StaticResource PageHelp}">
                     <StackPanel Margin="24,6,0,0" MaxWidth="900" HorizontalAlignment="Left">
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="D81 disk image"/><Run Text=' – A .D81 file is a virtual 3.5" floppy disk. Create one, put programs from your PC on it, or take files off it. Copy it to the SD card and mount it on the MEGA65 to use it like a real disk.'/></TextBlock>
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="ROM start-up settings"/><Run Text=" – The MEGA65 ROM remembers a few start-up choices: CPU speed, font and screen colours. Open a copy of your MEGA65.ROM, change them and save a new ROM file."/></TextBlock>
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="ROM patch (.rdf)"/><Run Text=" – Some ROM changes are shared as small patch files instead of whole ROMs. Choose the patch and your ROM, and a patched copy is saved. Your original ROM is never changed."/></TextBlock>
-                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Using the results"/><Run Text=" – Copy a new disk or ROM to the SD card with the SD Card Browser. To try a ROM without copying it, use ROM (temp) on the Device page."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Core file (.cor)"/><Run Text=" – Check that a core file is complete and undamaged before flashing it, or build a .cor from a .bit bitstream (for core developers)."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Using the results"/><Run Text=" – Copy a new disk or ROM to the SD card with the SD Card Browser. To try a ROM without copying it, use ROM (temp) on the Device page."/></TextBlock>
                     </StackPanel>
                 </Expander>
             </StackPanel>
@@ -628,6 +641,36 @@
                             <Button Grid.Row="1" Grid.Column="2" Content="Choose…" Command="{Binding ChoosePatchBaseCommand}" Margin="8,0,0,0"/>
                         </Grid>
                         <Button Content="Apply patch and save…" Style="{DynamicResource AccentButtonStyle}" Command="{Binding ApplyPatchCommand}" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </TabItem>
+                <TabItem Header="Core file (.cor)">
+                    <StackPanel Margin="0,10,0,0" MaxWidth="680" HorizontalAlignment="Left">
+                        <TextBlock Style="{StaticResource TabIntro}" Text="A .cor file is a MEGA65 core (the FPGA design) packaged for installing into a flash slot with MEGAFLASH. Check that a .cor file is complete and undamaged before you flash it, or build one from a .bit bitstream."/>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Check a core file" Style="{StaticResource SectionTitle}"/>
+                                <Button Content="Choose .cor file…" Command="{Binding VerifyCoreCommand}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding CoreReport}" FontFamily="Cascadia Mono, Consolas" FontSize="12" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                                <TextBlock Grid.ColumnSpan="3" Text="Build a core file from a bitstream" Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Grid.Row="1" Text="Bitstream" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding CoreBitPath, TargetNullValue='none'}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,0,6"/>
+                                <Button Grid.Row="1" Grid.Column="2" Content="Choose .bit…" Command="{Binding ChooseCoreBitCommand}" Margin="8,0,0,6"/>
+                                <TextBlock Grid.Row="2" Text="For model" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding CoreTargets}" SelectedItem="{Binding CoreTarget}" Margin="0,0,0,6"/>
+                                <TextBlock Grid.Row="3" Text="Core name" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding CoreName, UpdateSourceTrigger=PropertyChanged}" MaxLength="31" Margin="0,0,0,6" ToolTip="Shown in MEGAFLASH's slot list"/>
+                                <TextBlock Grid.Row="4" Text="Version" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding CoreVersion, UpdateSourceTrigger=PropertyChanged}" MaxLength="31" Margin="0,0,0,6"/>
+                                <Button Grid.Row="5" Grid.Column="1" Content="Build and save .cor…" Style="{DynamicResource AccentButtonStyle}" Command="{Binding BuildCoreCommand}" HorizontalAlignment="Left" Margin="0,4,0,0"/>
+                            </Grid>
+                        </Border>
+                        <TextBlock Style="{StaticResource Muted}" Text="Building uses the official bit2core tool. Nothing is flashed: install the core on the MEGA65 with MEGAFLASH."/>
                     </StackPanel>
                 </TabItem>
             </TabControl>

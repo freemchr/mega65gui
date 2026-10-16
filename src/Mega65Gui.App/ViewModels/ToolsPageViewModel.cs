@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Mega65Gui.App.Services;
 using Mega65Gui.App.Views;
+using Mega65Gui.Core.Cores;
 using Mega65Gui.Core.DiskImages;
 using Mega65Gui.Core.Roms;
 using Microsoft.Win32;
@@ -262,4 +263,70 @@ public sealed partial class ToolsPageViewModel(AppServices services) : PageViewM
             ? $"Patched ROM saved as {dlg.FileName} (version {RomFile.ReadVersion(File.ReadAllBytes(dlg.FileName)) ?? "unknown"})."
             : $"romdiff failed: {(r.StdErr + r.StdOut).Trim()}";
     }, "Applying patch…");
+
+    // ================= Core files (.cor) =================
+
+    public sealed record TargetChoice(string Target, string Label)
+    {
+        public override string ToString() => Label;
+    }
+
+    public IReadOnlyList<TargetChoice> CoreTargets { get; } = CoreFile.Targets.Select(t => new TargetChoice(t.Target, t.Label)).ToList();
+    [ObservableProperty] private TargetChoice? _coreTarget;
+    [ObservableProperty] private string? _coreBitPath;
+    [ObservableProperty] private string _coreName = "";
+    [ObservableProperty] private string _coreVersion = "";
+    [ObservableProperty] private string _coreReport = "Choose a .cor file to check it, or build one from a .bit bitstream.";
+
+    [RelayCommand]
+    private Task VerifyCoreAsync()
+    {
+        var dlg = new OpenFileDialog { Filter = "MEGA65 core files (*.cor)|*.cor" };
+        return dlg.ShowDialog() == true ? ShowCoreAsync(dlg.FileName) : Task.CompletedTask;
+    }
+
+    private Task ShowCoreAsync(string path) => GuardAsync(async () =>
+    {
+        var info = await Task.Run(() => CoreFile.Read(path));
+        var label = CoreFile.Targets.FirstOrDefault(t => t.Target == info.Target).Label ?? info.Target;
+        CoreReport =
+            $"{Path.GetFileName(path)}\n" +
+            $"Core: {info.CoreName}\nVersion: {info.CoreVersion}\nFor: {label} (model ${info.ModelId:X2})\n" +
+            $"Size: {info.CoreSize:N0} bytes{(info.EmbeddedFiles > 0 ? $", {info.EmbeddedFiles} embedded file(s)" : "")}\n" +
+            (info.IsValid
+                ? $"Check: OK – the CRC32 ({info.StoredCrc:X8}) matches the contents."
+                : info.SizeFits
+                    ? $"Check: FAILED – the file is damaged (CRC32 stored {info.StoredCrc:X8}, calculated {info.ComputedCrc:X8}). Do not flash it."
+                    : "Check: FAILED – the size in the header does not match the file. Do not flash it.");
+        Status = info.IsValid ? "The core file is valid." : "The core file failed its check.";
+    }, "Checking the core file…");
+
+    [RelayCommand]
+    private void ChooseCoreBit()
+    {
+        var dlg = new OpenFileDialog { Filter = "FPGA bitstreams (*.bit)|*.bit" };
+        if (dlg.ShowDialog() != true) return;
+        CoreBitPath = dlg.FileName;
+        var name = Path.GetFileNameWithoutExtension(dlg.FileName);
+        CoreTarget ??= CoreTargets.FirstOrDefault(t => name.StartsWith(t.Target, StringComparison.OrdinalIgnoreCase)) ?? CoreTargets[0];
+        if (CoreName.Length == 0) CoreName = name.Length > 31 ? name[..31] : name;
+        if (CoreVersion.Length == 0) CoreVersion = DateTime.Now.ToString("yyyyMMdd");
+    }
+
+    [RelayCommand]
+    private Task BuildCoreAsync() => GuardAsync(async () =>
+    {
+        if (CoreBitPath is null || CoreTarget is null) { Status = "Choose a .bit bitstream and the model it is for."; return; }
+        var commands = services.Commands ?? throw new InvalidOperationException("Building a core uses bit2core from the device tools; install them first.");
+        var dlg = new SaveFileDialog { Filter = "MEGA65 core files (*.cor)|*.cor", FileName = Path.GetFileNameWithoutExtension(CoreBitPath) + ".cor" };
+        if (dlg.ShowDialog() != true) return;
+        var r = await commands.BuildCoreAsync(CoreTarget.Target, CoreBitPath, CoreName.Trim(), CoreVersion.Trim(), dlg.FileName);
+        if (!r.Succeeded || !File.Exists(dlg.FileName))
+        {
+            Status = "bit2core failed: " + string.Join(" ", (r.StdErr + r.StdOut).Split('\n').Where(l => l.Contains("ERROR")).Take(2)).Trim();
+            return;
+        }
+        await ShowCoreAsync(dlg.FileName);
+        Status = $"Core saved as {dlg.FileName}. Copy it to the SD card and install it with MEGAFLASH (hold No Scroll while switching on).";
+    }, "Building the core file…");
 }

@@ -53,7 +53,7 @@ public static class FeatureCatalog
         new("SD card", "Local SD card synchronisation (plan, back up, apply, verify)", FeatureStatus.Implemented, "Card reader", "SdSyncPlanner/Executor", "Never deletes; case-insensitive FAT32 matching"),
         new("SD card", "D81 contiguity check after copy", FeatureStatus.HardwareUnverified, "Card reader", "FSCTL_GET_RETRIEVAL_POINTERS", "Windows only"),
         new("SD card", "Remote SD manager (dir, get, put, del, rename, mkdir, mount)", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "Interactive mega65_ftp session", "SD Card Browser. Browse, upload, download and delete verified on an R6; deleting folders needs the development tools build"),
-        new("SD card", "Local SD file manager and eject", FeatureStatus.Partial, "Card reader", "Native", "The SD Card Browser's PC pane covers files; eject not yet"),
+        new("SD card", "Local SD file manager and eject", FeatureStatus.HardwareUnverified, "Card reader", "Native; lock, dismount and eject the volume", "The SD Card Browser's PC pane covers files; Eject on the Update and SD Card Sync pages (not yet tried with a card reader)"),
 
         // Device control
         new("Control", "Reset", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "m65 -F / etherload -5", "Verified by the hardware self-test on an R6 2026-10-16"),
@@ -68,7 +68,7 @@ public static class FeatureCatalog
         new("Disk images", "D81 create, list, add, extract, delete, rename", FeatureStatus.Implemented, "None", "Native", "Checked against a real public D81; tested round trips"),
         new("ROM", "ROM Configurator (speed, font, colours)", FeatureStatus.Implemented, "None", "Native ($17FF8-$17FFF)", "Edits a copy of the ROM; ROM 920252+"),
         new("ROM", "ROM patch apply/create (.rdf)", FeatureStatus.Partial, "None", "romdiff", "Apply via romdiff (not yet tried with a real patch); create not offered"),
-        new("Cores", "COR/MCS build and verify", FeatureStatus.Planned, "None", "coretool.py / bit2core", "coretool needs Python"),
-        new("Developer", "Memory dump, unit-test runner, breakpoints", FeatureStatus.Planned, "USB/JTAG", "m65 --memsave, -u, -B", "Not exposed by M65Connect"),
+        new("Cores", "COR build and verify", FeatureStatus.Implemented, "None", "bit2core; header and CRC32 check", "Disk & ROM Tools. Verified 2026-10-16: a core built from the 0.97.2 .bit has the same bitstream as the official .cor and both pass the CRC check"),
+        new("Developer", "Memory dump, unit-test runner, breakpoints", FeatureStatus.Implemented, "USB/JTAG", "Monitor M/b/t0; m65 -u -w", "Terminal and Device pages. Verified on an R6 2026-10-16: an 8 KB dump matched MEGA65.ROM, a breakpoint stopped and resumed the CPU, a test program's PASS/FAIL were reported. m65 --memsave is avoided: on Windows it corrupts $0A bytes"),
     ];
 }

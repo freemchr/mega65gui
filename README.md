@@ -2,6 +2,8 @@
 
 Created by **Chris Freeman**.
 
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/cjf077)
+
 A Windows application for maintaining, updating and using a [MEGA65](https://mega65.org).
 
 It brings together:

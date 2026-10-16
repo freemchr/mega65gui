@@ -142,4 +142,26 @@ public class DeviceTests
         Assert.True(NetworkCheck.IsVirtual("VMware Virtual Ethernet Adapter for VMnet8"));
         Assert.False(NetworkCheck.IsVirtual("Realtek USB 2.5GbE Family Controller"));
     }
+
+    [Fact]
+    public void Unit_test_arguments_load_run_and_log()
+    {
+        var (tool, args) = Mega65Commands.UnitTestArgs(ConnectionTarget.Serial("COM3"), "t.prg", 30, "log.txt");
+        Assert.Equal("m65", tool);
+        Assert.Equal(["-l", "COM3", "-s", "2000000", "-F", "-r", "-u30", "-w", "log.txt", "t.prg"], args);
+    }
+
+    [Fact]
+    public void Memory_dump_parses_monitor_lines()
+    {
+        const string reply = "M20000\r\n:00020000:69B51E80288088998E9999999999129A\r\n:00020010:F999899A709A5639323034313300A980\r\n\r\n.";
+        var buf = new byte[20];
+        Assert.Equal(20, MemoryDump.Parse(reply, 0x20000, buf));
+        Assert.Equal(0x69, buf[0]);
+        Assert.Equal(0x9A, buf[15]);
+        Assert.Equal(0x9A, buf[19]);
+        Assert.True(MemoryDump.TryParseAddress("$2001", out var a) && a == 0x2001);
+        Assert.False(MemoryDump.TryParseAddress("10000000", out _));
+        Assert.True(MonitorConnection.EndsWithPrompt(new System.Text.StringBuilder(reply)));
+    }
 }

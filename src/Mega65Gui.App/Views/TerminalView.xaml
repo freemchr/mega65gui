@@ -12,6 +12,7 @@
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Useful commands"/><Run Text=" – h shows the core version · r shows the CPU registers · m 2001 shows memory from $2001 · d 2001 disassembles from $2001. Type a command in the box at the bottom and press Enter."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Careful"/><Run Text=" – Some monitor commands change memory or stop the CPU. If the MEGA65 stops responding, press Reset on the Device page."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Remote keyboard"/><Run Text=" – Turn it on, click the blue box and type: your keys are pressed on the MEGA65. Enter is RETURN, Esc is RUN/STOP, F1–F8 are the function keys."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Developer"/><Run Text=" – Save a range of the MEGA65's memory to a file, or stop the CPU at an address (breakpoint), look at the registers, then clear it and continue."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Close"/><Run Text=" – Frees the USB connection for the other pages. It closes by itself when you leave this page."/></TextBlock>
                 </StackPanel>
             </Expander>
@@ -35,6 +36,25 @@
                 </StackPanel>
             </ToggleButton>
         </StackPanel>
+        <!-- Developer tools -->
+        <Expander DockPanel.Dock="Top" Header="Developer: memory dump and breakpoints" Margin="0,0,0,8" IsEnabled="{Binding IsOpen}">
+            <StackPanel Margin="0,8,0,0">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock Text="Save memory from $" Style="{StaticResource Label}"/>
+                    <TextBox Text="{Binding DumpStart, UpdateSourceTrigger=PropertyChanged}" Width="90" FontFamily="Cascadia Mono, Consolas" ToolTip="Start address in hex (up to 28 bits, e.g. 2001, 20000, FFD3000)"/>
+                    <TextBlock Text="length $" Style="{StaticResource Label}" Margin="10,0,8,0"/>
+                    <TextBox Text="{Binding DumpLength, UpdateSourceTrigger=PropertyChanged}" Width="80" FontFamily="Cascadia Mono, Consolas" ToolTip="Number of bytes in hex (up to 100000 = 1 MB). About 1.3 KB per second."/>
+                    <Button Content="Save to file…" Command="{Binding DumpMemoryCommand}" Margin="10,0,0,0"/>
+                    <ProgressBar Width="120" Height="4" Margin="10,0,0,0" Value="{Binding DumpProgress}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Breakpoint at $" Style="{StaticResource Label}"/>
+                    <TextBox Text="{Binding BreakAddress, UpdateSourceTrigger=PropertyChanged}" Width="90" FontFamily="Cascadia Mono, Consolas" ToolTip="CPU address in hex (0000-FFFF)"/>
+                    <Button Content="Set" Command="{Binding SetBreakpointCommand}" Margin="10,0,6,0" ToolTip="Stop the CPU when it reaches this address"/>
+                    <Button Content="Clear and continue" Command="{Binding ContinueCommand}" ToolTip="Remove the breakpoint and let the CPU run again"/>
+                </StackPanel>
+            </StackPanel>
+        </Expander>
         <!-- Remote keyboard capture -->
         <Border x:Name="KeyCapture" DockPanel.Dock="Top" Margin="0,0,0,8" Padding="12,8" CornerRadius="6" Focusable="True"
                 BorderThickness="2" BorderBrush="{DynamicResource AccentFillColorDefaultBrush}" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"

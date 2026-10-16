@@ -116,6 +116,39 @@ public sealed class MonitorConnection : IDisposable
 
     public Task SendCommandAsync(string command, CancellationToken ct = default) => SendAsync(command.TrimEnd('\r', '\n') + "\r", ct);
 
+    /// <summary>
+    /// Sends a command and returns its reply, up to the monitor's "." prompt.
+    /// Used for scripted reads such as memory dumps; the reply is also raised through Received.
+    /// </summary>
+    public async Task<string> QueryAsync(string command, TimeSpan timeout, CancellationToken ct = default)
+    {
+        var reply = new StringBuilder();
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        void OnReceived(string s)
+        {
+            lock (reply)
+            {
+                reply.Append(s);
+                if (EndsWithPrompt(reply)) done.TrySetResult();
+            }
+        }
+        Received += OnReceived;
+        try
+        {
+            await SendCommandAsync(command, ct);
+            await done.Task.WaitAsync(timeout, ct);
+            lock (reply) return reply.ToString();
+        }
+        finally { Received -= OnReceived; }
+    }
+
+    /// <summary>True when the text ends with the monitor prompt: a "." on a line of its own.</summary>
+    public static bool EndsWithPrompt(StringBuilder text)
+    {
+        var s = text.ToString().TrimEnd(' ');
+        return s.EndsWith("\n.", StringComparison.Ordinal) || s.EndsWith("\r.", StringComparison.Ordinal);
+    }
+
     public async Task PressAsync(byte key, byte modifier, CancellationToken ct = default)
     {
         // Each step needs a keyboard scan to see it before the next.

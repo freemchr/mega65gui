@@ -57,7 +57,7 @@ The in-app **Features** page shows the same list from `src/Mega65Gui.Core/Featur
 | SD card | Local SD card synchronisation (plan, back up, apply, verify) | – | – | Implemented |
 | SD card | D81 contiguity check after copy | – | `mega65_ftp clusters` (remote) | Hardware unverified |
 | SD card | Remote SD manager (dir, get, put, del, rename, mkdir, mount) | Yes (J, E) | `mega65_ftp -c …` | Implemented (verified by the hardware self-test on an R6) |
-| SD card | Local SD file manager and eject | Yes | `mega65_ftp -d` (raw) | Partial (no eject) |
+| SD card | Local SD file manager and eject | Yes | Native lock/dismount/eject | Hardware unverified (eject) |
 | Control | Reset | Yes (J, E) | `m65 -F`, `etherload -5` | Implemented (verified by the hardware self-test on an R6) |
 | Control | C64 / MEGA65 mode switching | Yes (J, E) | `m65 -F -4`, `etherload --c64mode/--m65mode` | Implemented (verified by the hardware self-test on an R6) |
 | Control | Start a core from a flash slot | Via MEGAFLASH | `m65 -Z` | Implemented (verified by the hardware self-test on an R6) |
@@ -68,8 +68,8 @@ The in-app **Features** page shows the same list from `src/Mega65Gui.Core/Featur
 | Disk images | D81 create, list, add, extract, delete, rename | Native | None | Implemented |
 | ROM | ROM Configurator (speed, font, colours) | Native | None | Implemented |
 | ROM | ROM patch apply/create (.rdf) | `romdiff`, `bsdiff` | `romdiff` | Partial (apply only) |
-| Cores | COR/MCS build and verify | `bit2core`/`bit2mcs` (removed in 2.4) | `coretool.py` | Planned |
-| Developer | Memory dump, unit-test runner, breakpoints | – | `m65 --memsave`, `-u`, `-B` | Planned |
+| Cores | COR build and verify | `bit2core`/`bit2mcs` (removed in 2.4) | `bit2core` + header/CRC32 check | Implemented (verified with the 0.97.2 core) |
+| Developer | Memory dump, unit-test runner, breakpoints | – | Monitor `M`/`b`/`t0`; `m65 -u -w` | Implemented (verified on an R6) |
 
 ## Hardware facts used
 

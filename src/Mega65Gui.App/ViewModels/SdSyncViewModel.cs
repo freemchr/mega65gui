@@ -39,6 +39,22 @@ public sealed partial class SdSyncViewModel(AppServices services) : PageViewMode
     }
 
     [RelayCommand]
+    private void EjectCard()
+    {
+        if (Services.CardEjector.RemovableDriveOf(SdCardPath) is not { } drive)
+        {
+            Status = "Choose the SD card's drive first (a removable drive such as E:).";
+            return;
+        }
+        try
+        {
+            Services.CardEjector.Eject(drive);
+            Status = $"The SD card in {drive} has been ejected. You can take it out of the card reader.";
+        }
+        catch (Exception e) when (e is IOException or System.ComponentModel.Win32Exception) { Status = e.Message; }
+    }
+
+    [RelayCommand]
     private void BrowseSdCard()
     {
         var dlg = new OpenFolderDialog { Title = "Select your MEGA65 SD card" };

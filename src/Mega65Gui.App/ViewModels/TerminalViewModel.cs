@@ -12,6 +12,7 @@ public sealed partial class TerminalViewModel : PageViewModel
 {
     private readonly AppServices services;
     private MonitorConnection? _monitor;
+    private volatile bool _quiet;
     private readonly StringBuilder _text = new();
 
     public TerminalViewModel(AppServices services) : base("Terminal", "")
@@ -34,7 +35,7 @@ public sealed partial class TerminalViewModel : PageViewModel
             throw new InvalidOperationException("The terminal needs a USB/JTAG connection. Connect on the Device or Update page first.");
         await services.ReleasePortAsync();
         _monitor = MonitorConnection.Open(c.Address);
-        _monitor.Received += s => Application.Current.Dispatcher.BeginInvoke(() => Append(s));
+        _monitor.Received += s => { if (!_quiet) Application.Current.Dispatcher.BeginInvoke(() => Append(s)); };
         IsOpen = true;
         Append($"--- connected to the MEGA65 serial monitor on {c.Address}. Type h for help. ---\n");
         await _monitor.SendCommandAsync("h");
@@ -84,6 +85,55 @@ public sealed partial class TerminalViewModel : PageViewModel
     {
         if (_monitor is null) return;
         await _monitor.SendCommandAsync(cmd);
+    }
+
+    // ===== Developer: memory dump and breakpoints =====
+
+    [ObservableProperty] private string _dumpStart = "2001";
+    [ObservableProperty] private string _dumpLength = "1000";
+    [ObservableProperty] private string _breakAddress = "";
+    [ObservableProperty] private double _dumpProgress;
+
+    /// <summary>Saves a memory range to a file, read through the monitor (256 bytes per command).</summary>
+    [RelayCommand]
+    private Task DumpMemoryAsync() => GuardAsync(async () =>
+    {
+        if (_monitor is null) throw new InvalidOperationException("Open the terminal first.");
+        if (!MemoryDump.TryParseAddress(DumpStart, out var start)) throw new InvalidOperationException("Enter the start address in hex, for example 2001 or 20000.");
+        if (!MemoryDump.TryParseAddress(DumpLength, out var length) || length == 0 || length > 0x100000)
+            throw new InvalidOperationException("Enter the length in hex, from 1 to 100000 (1 MB).");
+        var dlg = new Microsoft.Win32.SaveFileDialog { Title = "Save memory dump", FileName = $"mem-{start:X}-{start + length - 1:X}.bin", Filter = "Binary files (*.bin)|*.bin|All files|*.*" };
+        if (dlg.ShowDialog() != true) return;
+        Append($"--- reading ${start:X}-${start + length - 1:X} ({length} bytes) ---\n");
+        _quiet = true;
+        try
+        {
+            var data = await MemoryDump.ReadAsync(_monitor, start, (int)length, new Progress<double>(p => DumpProgress = p * 100));
+            await File.WriteAllBytesAsync(dlg.FileName, data);
+        }
+        finally { _quiet = false; DumpProgress = 0; }
+        Append($"--- saved {length} bytes to {dlg.FileName} ---\n");
+        Status = $"Saved {length} bytes to {Path.GetFileName(dlg.FileName)}.";
+    }, "Reading memory…");
+
+    [RelayCommand]
+    private async Task SetBreakpointAsync()
+    {
+        if (_monitor is null) return;
+        if (!MemoryDump.TryParseAddress(BreakAddress, out var addr) || addr > 0xFFFF)
+        { Status = "Enter the breakpoint address in hex (0000-FFFF), for example E1C5."; return; }
+        await _monitor.SendCommandAsync($"b{addr:x}");
+        Status = $"Breakpoint set at ${addr:X4}. When the CPU reaches it, it stops; press Registers to see where it is, and Continue to carry on.";
+    }
+
+    /// <summary>Clears the breakpoint and lets the CPU run again ("b" then "t0").</summary>
+    [RelayCommand]
+    private async Task ContinueAsync()
+    {
+        if (_monitor is null) return;
+        await _monitor.SendCommandAsync("b");
+        await _monitor.SendCommandAsync("t0");
+        Status = "Breakpoint cleared; the CPU is running.";
     }
 
     /// <summary>Presses a key on the MEGA65 (remote keyboard).</summary>

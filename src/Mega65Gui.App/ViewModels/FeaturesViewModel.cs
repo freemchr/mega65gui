@@ -16,7 +16,6 @@ public sealed class FeaturesViewModel : PageViewModel
         (FeatureStatus.HardwareUnverified, "Built, not yet tested on a MEGA65", "These should work but have not been tried on real hardware yet. Please report any problems.", ""),
         (FeatureStatus.Partial, "Partly done", "Some of this works; the rest is still to come.", ""),
         (FeatureStatus.Planned, "Planned", "Not built yet.", ""),
-        (FeatureStatus.NotOffered, "Not offered", "Left out on purpose, because it is unsafe or the official tools cannot do it.", ""),
     ];
 
     public FeaturesViewModel() : base("Features", "")

@@ -265,6 +265,28 @@ public sealed partial class DeviceViewModel : PageViewModel
         ? RunToolAsync((c, t) => c.LoadHickupAsync(t, f), $"Loading {Path.GetFileName(f)}…")
         : Task.CompletedTask;
 
+    /// <summary>Runs a test program in unit-test mode and reports how many tests failed.</summary>
+    [RelayCommand]
+    private Task RunUnitTestAsync()
+    {
+        if (Pick("Run a unit-test program", "Programs (*.prg)|*.prg") is not { } f) return Task.CompletedTask;
+        var log = Path.Combine(services.Paths.Reports, $"unittest-{DateTime.Now:yyyyMMdd-HHmmss}.log");
+        return GuardAsync(async () =>
+        {
+            var target = services.Connection ?? throw new InvalidOperationException("Connect to a MEGA65 first.");
+            await services.ReleasePortAsync();
+            var r = await RequireTools().RunUnitTestAsync(target, f, 60, log);
+            foreach (var line in (r.StdOut + r.StdErr).Split('\n', StringSplitOptions.RemoveEmptyEntries).TakeLast(60))
+                Output.Add(line.TrimEnd());
+            Status = r.ExitCode switch
+            {
+                0 => $"All tests passed. Log: {log}",
+                254 or 255 or -1 => $"The program did not report that it finished within 60 seconds. Log: {log}",
+                var n => $"{n} test(s) failed. Log: {log}",
+            };
+        }, $"Running {Path.GetFileName(f)} in unit-test mode…");
+    }
+
     [RelayCommand] private Task SetPalAsync() => RunToolAsync((c, t) => c.SetVideoModeAsync(t, pal: true), "Switching to PAL…");
     [RelayCommand] private Task SetNtscAsync() => RunToolAsync((c, t) => c.SetVideoModeAsync(t, pal: false), "Switching to NTSC…");
 

@@ -148,6 +148,21 @@ public sealed class Mega65Commands(ToolInstallation tools, IProcessRunner runner
     public async Task<ProcessResult> RemoteSdAsync(ConnectionTarget t, IProgress<string>? output, CancellationToken ct, params string[] commands) =>
         await Run(FtpArgs(t, await FtpSupportsYesAsync(ct), commands), Long, ct, output);
 
+    /// <summary>
+    /// Runs a program in unit-test mode: the program reports results by writing tokens to $D643
+    /// ($F0 start, $F2 pass, $F3 fail, $FF all done). m65 exits with the number of failures,
+    /// or 254 when the program does not finish within the timeout.
+    /// </summary>
+    public static (string Tool, List<string> Args) UnitTestArgs(ConnectionTarget t, string prg, int timeoutSeconds, string logFile) =>
+        SerialOnly(t, "Running unit tests", "-F", "-r", $"-u{Math.Max(10, timeoutSeconds)}", "-w", logFile, prg);
+
+    public Task<ProcessResult> RunUnitTestAsync(ConnectionTarget t, string prg, int timeoutSeconds, string logFile, IProgress<string>? output = null, CancellationToken ct = default) =>
+        Run(UnitTestArgs(t, prg, timeoutSeconds, logFile), TimeSpan.FromSeconds(Math.Max(10, timeoutSeconds) + 60), ct, output);
+
+    /// <summary>Builds a .cor core file from a .bit bitstream with the official bit2core tool.</summary>
+    public Task<ProcessResult> BuildCoreAsync(string target, string bitPath, string name, string version, string outPath, CancellationToken ct = default) =>
+        Run(("bit2core", Cores.CoreFile.Bit2CoreArgs(target, bitPath, name, version, outPath)), TimeSpan.FromMinutes(2), ct);
+
     /// <summary>Discovers MEGA65s on the LAN that have the Ethernet loader enabled (SHIFT+£).</summary>
     public async Task<IReadOnlyList<string>> DiscoverEthernetAsync(CancellationToken ct = default)
     {
