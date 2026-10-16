@@ -60,7 +60,8 @@
 
             <Border Style="{StaticResource Card}" Padding="6" Margin="0">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding Steps}">
+                    <!-- Right margin keeps the status labels clear of the overlay scrollbar -->
+                    <ItemsControl ItemsSource="{Binding Steps}" Margin="0,0,16,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Grid Margin="6,4">
@@ -157,7 +158,7 @@
                                 </StackPanel>
                             </StackPanel>
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel>
+                                <StackPanel Margin="0,0,14,0">
                                     <TextBlock Text="{Binding Detail.Title}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"/>
                                     <TextBlock Style="{StaticResource Muted}" Margin="0,2,0,8"
                                                Visibility="{Binding Detail.IsAvailable, Converter={StaticResource BoolToVisible}}">
@@ -231,7 +232,7 @@
             <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="400"/><ColumnDefinition Width="12"/><ColumnDefinition/></Grid.ColumnDefinitions>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
+                    <StackPanel Margin="0,0,12,0">
                         <Border Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Text="Connection" Style="{StaticResource SectionTitle}"/>
