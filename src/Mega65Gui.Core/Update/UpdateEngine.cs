@@ -278,8 +278,12 @@ public sealed class UpdateEngine(
         {
             // Every uploaded file was already read back from the card and compared in step 8.
             var bad = _report.SdSync?.Results.Where(r => r.Outcome == ItemOutcome.Failed).Select(r => r.Item.RelativePath).ToList() ?? [];
+            var uploaded = (_report.SdSync?.Results.Count(r => r.Outcome == ItemOutcome.Written) ?? 0)
+                           + (_report.CoreStaging?.Results.Count(r => r.Outcome == ItemOutcome.Written) ?? 0);
             Set(11, bad.Count == 0 ? StepStatus.Done : StepStatus.Failed, bad.Count == 0
-                ? "Every uploaded file was read back from the card and matches the release."
+                ? uploaded == 0
+                    ? "Nothing needed uploading; the card's files were compared byte for byte with the release."
+                    : $"All {uploaded} uploaded file(s) were read back from the card and match the release."
                 : $"{bad.Count} file(s) did not match on read-back: {string.Join(", ", bad)}");
         }
         else

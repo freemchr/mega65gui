@@ -111,7 +111,7 @@ public sealed class UpdateEngineTests : IDisposable
         Assert.Equal("mine", File.ReadAllText(Path.Combine(Card, "MYGAME.D81")));
         Assert.Equal("R6 CORE", File.ReadAllText(Path.Combine(Card, "mega65r6-20250919.07-r-0.97.2-03b24c6.cor")));
         Assert.Equal(StepStatus.Done, report.Steps.Single(s => s.Number == 11).Status);
-        Assert.Contains("read back", report.Steps.Single(s => s.Number == 11).Detail);
+        Assert.Contains("uploaded file(s) were read back", report.Steps.Single(s => s.Number == 11).Detail);
         Assert.Equal(2, card.Uploads); // system files, then the core
         Assert.Equal(3, gate.Prompts);
     }
