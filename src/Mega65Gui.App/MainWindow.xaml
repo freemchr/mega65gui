@@ -1,34 +1,116 @@
 <Window x:Class="Mega65Gui.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MEGA65 GUI" Width="1200" Height="800" MinWidth="900" MinHeight="600"
+        Title="MEGA65 GUI" Width="1120" Height="720" MinWidth="860" MinHeight="560" FontSize="13"
         Background="{DynamicResource ApplicationBackgroundBrush}">
     <DockPanel>
-        <!-- MEGA65 rainbow stripe -->
-        <UniformGrid DockPanel.Dock="Top" Rows="1" Height="4">
-            <Rectangle Fill="#E4002B"/><Rectangle Fill="#FF8200"/><Rectangle Fill="#FFCD00"/><Rectangle Fill="#00A651"/><Rectangle Fill="#0072CE"/>
-        </UniformGrid>
-        <Border DockPanel.Dock="Left" Width="220" Background="{DynamicResource LayerFillColorDefaultBrush}"
+        <!-- ===== Sidebar ===== -->
+        <Border DockPanel.Dock="Left" Width="208" Background="{DynamicResource LayerFillColorDefaultBrush}"
                 BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
-            <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Margin="16,18,16,14">
-                    <TextBlock Text="MEGA65" FontSize="22" FontWeight="Bold"/>
-                    <TextBlock Text="Maintain · Update · Use" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+            <DockPanel Margin="10,0">
+                <!-- Brand -->
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,18,0,18">
+                    <Canvas Width="26" Height="20" Margin="0,0,10,0" VerticalAlignment="Center" ClipToBounds="True">
+                        <Canvas.RenderTransform><SkewTransform AngleX="-20"/></Canvas.RenderTransform>
+                        <Rectangle Canvas.Left="6"  Width="4" Height="20" Fill="{StaticResource M65Red}"/>
+                        <Rectangle Canvas.Left="10" Width="4" Height="20" Fill="{StaticResource M65Orange}"/>
+                        <Rectangle Canvas.Left="14" Width="4" Height="20" Fill="{StaticResource M65Yellow}"/>
+                        <Rectangle Canvas.Left="18" Width="4" Height="20" Fill="{StaticResource M65Green}"/>
+                        <Rectangle Canvas.Left="22" Width="4" Height="20" Fill="{StaticResource M65Blue}"/>
+                    </Canvas>
+                    <StackPanel>
+                        <TextBlock Text="MEGA65" FontSize="17" FontWeight="Bold" LineHeight="18"/>
+                        <TextBlock Text="Manager" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
                 </StackPanel>
-                <ListBox ItemsSource="{Binding Pages}" SelectedItem="{Binding Selected}" BorderThickness="0" Background="Transparent" Margin="6,0">
+
+                <!-- Footer: device, tools, account (always visible) -->
+                <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,12" DataContext="{Binding Shell}">
+                    <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,10"/>
+                    <StackPanel Orientation="Horizontal" Margin="6,0,0,6" ToolTip="Device connection (Device page)">
+                        <Ellipse>
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse" BasedOn="{StaticResource Dot}">
+                                    <Setter Property="Fill" Value="#8A8A8A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding DeviceConnected}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource M65Green}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="{Binding DeviceText}" FontSize="12" TextTrimming="CharacterEllipsis" MaxWidth="160"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="6,0,0,10" ToolTip="Official MEGA65 tools (Tools page)">
+                        <Ellipse>
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse" BasedOn="{StaticResource Dot}">
+                                    <Setter Property="Fill" Value="{StaticResource M65Orange}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ToolsInstalled}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource M65Green}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="{Binding ToolsText}" FontSize="12"/>
+                    </StackPanel>
+
+                    <!-- Account card -->
+                    <Border CornerRadius="6" Padding="8" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                <Border Width="30" Height="30" CornerRadius="15" Margin="0,0,8,0">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{DynamicResource ControlStrongFillColorDefaultBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSignedIn}" Value="True">
+                                                    <Setter Property="Background" Value="{StaticResource M65Blue}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="{Binding Initial}" Foreground="White" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding AccountName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding AccountDetail}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding Message}" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
+                                       Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                       Visibility="{Binding Message, Converter={StaticResource NullToCollapsed}}"/>
+                            <Button Content="Sign in" Margin="0,8,0,0" HorizontalAlignment="Stretch" Style="{DynamicResource AccentButtonStyle}"
+                                    Command="{Binding SignInCommand}"
+                                    Visibility="{Binding IsSignedIn, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}"/>
+                            <Button Content="Sign out" Margin="0,8,0,0" HorizontalAlignment="Stretch"
+                                    Command="{Binding SignOutCommand}"
+                                    Visibility="{Binding IsSignedIn, Converter={StaticResource BoolToVisible}}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Navigation -->
+                <ListBox ItemsSource="{Binding Pages}" SelectedItem="{Binding Selected}" BorderThickness="0" Background="Transparent"
+                         ItemContainerStyle="{StaticResource NavItem}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Orientation="Horizontal" Margin="4,6">
-                                <TextBlock Text="{Binding Glyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16" Width="28" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding Title}" FontSize="14" VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Glyph}" Style="{StaticResource Icon}" Width="26"/>
+                                <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
             </DockPanel>
         </Border>
-        <Grid>
-            <ContentControl Content="{Binding Selected}" Margin="24,16,24,8"/>
-        </Grid>
+
+        <!-- ===== Content ===== -->
+        <ContentControl Content="{Binding Selected}" Margin="22,16,22,10"/>
     </DockPanel>
 </Window>

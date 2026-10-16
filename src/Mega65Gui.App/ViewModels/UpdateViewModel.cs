@@ -32,7 +32,7 @@ public sealed partial class UpdateViewModel(AppServices services, IApprovalGate 
 
     public IReadOnlyList<ModelChoice> ModelChoices { get; } =
     [
-        new("Use the model read from the device", null),
+        new("Auto (read from device)", null),
         new("MEGA65 R6", HardwareModel.R6),
         new("MEGA65 R5 (beta PCB)", HardwareModel.R5),
         new("MEGA65 R3 / R3a / DevKit", HardwareModel.R3),

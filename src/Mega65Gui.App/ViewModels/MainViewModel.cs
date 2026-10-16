@@ -14,8 +14,11 @@ public sealed partial class MainViewModel : ObservableObject
         Tools = new ToolsViewModel(services);
         Features = new FeaturesViewModel();
         Pages = [Update, Catalogue, Device, SdSync, Tools, Features];
+        Shell = new ShellStatusViewModel(services);
         _selected = Update;
     }
+
+    public ShellStatusViewModel Shell { get; }
 
     public UpdateViewModel Update { get; }
     public CatalogueViewModel Catalogue { get; }
@@ -27,5 +30,9 @@ public sealed partial class MainViewModel : ObservableObject
 
     [ObservableProperty] private PageViewModel _selected;
 
-    partial void OnSelectedChanged(PageViewModel value) => _ = value.OnShownAsync();
+    partial void OnSelectedChanged(PageViewModel value)
+    {
+        Shell.Refresh();
+        _ = value.OnShownAsync();
+    }
 }

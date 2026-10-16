@@ -8,6 +8,11 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Loaded += (_, _) => (DataContext as MainViewModel)?.Selected.OnShownAsync();
+        Loaded += async (_, _) =>
+        {
+            if (DataContext is not MainViewModel vm) return;
+            await vm.Selected.OnShownAsync();
+            await vm.Shell.TryAutoSignInAsync();
+        };
     }
 }

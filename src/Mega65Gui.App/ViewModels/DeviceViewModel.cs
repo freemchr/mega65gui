@@ -18,7 +18,7 @@ public sealed partial class DeviceViewModel(AppServices services) : PageViewMode
     [ObservableProperty] private string? _selectedPort;
     [ObservableProperty] private string? _selectedEthernet;
     [ObservableProperty] private string _connectionText = "Not connected";
-    [ObservableProperty] private string _deviceText = "";
+    [ObservableProperty] private string _deviceText = "Plug in the USB/JTAG cable, choose its COM port and press Connect. The model, core and ROM are read automatically.";
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private bool _runAfterLoad = true;
     [ObservableProperty] private bool _c64Mode;
@@ -71,6 +71,7 @@ public sealed partial class DeviceViewModel(AppServices services) : PageViewMode
         services.Connection = target;
         services.Device = state with { Connection = target };
         IsConnected = true;
+        (System.Windows.Application.Current.MainWindow?.DataContext as MainViewModel)?.Shell.Refresh();
         ConnectionText = target.ToString();
         DeviceText = target.Kind == ConnectionKind.Ethernet
             ? "Connected over Ethernet. Model and core cannot be read over Ethernet with the official tools."

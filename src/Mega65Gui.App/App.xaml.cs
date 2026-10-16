@@ -11,6 +11,9 @@ public partial class App : Application
 {
     protected override async void OnStartup(StartupEventArgs e)
     {
+        // WPF bindings format dates as en-US unless told otherwise; follow the user's regional settings.
+        FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement),
+            new FrameworkPropertyMetadata(System.Windows.Markup.XmlLanguage.GetLanguage(System.Globalization.CultureInfo.CurrentCulture.IetfLanguageTag)));
         base.OnStartup(e);
         DispatcherUnhandledException += (_, args) =>
         {

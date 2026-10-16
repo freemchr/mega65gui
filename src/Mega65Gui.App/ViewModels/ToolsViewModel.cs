@@ -28,6 +28,7 @@ public sealed partial class ToolsViewModel(AppServices services) : PageViewModel
             InstalledText = "The official MEGA65 tools (m65, mega65_ftp, etherload) are not installed yet. Device features need them.";
             return;
         }
+        (System.Windows.Application.Current.MainWindow?.DataContext as MainViewModel)?.Shell.Refresh();
         InstalledText = $"Version {t.Version ?? "unknown"} · {t.Source} · installed {t.InstalledAt.LocalDateTime:g}";
         foreach (var e in t.Executables.OrderBy(e => e.Key)) Executables.Add(e);
     }

@@ -21,12 +21,16 @@ public sealed partial class CatalogueViewModel : PageViewModel
 {
     private readonly AppServices services;
     private bool _loaded;
-    private bool _triedAutoSignIn;
 
     public CatalogueViewModel(AppServices services) : base("Filehost", "\uE774")
     {
         this.services = services;
-        services.Session.Changed += () => System.Windows.Application.Current.Dispatcher.Invoke(UpdateAccount);
+        services.Session.Changed += () => System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            UpdateAccount();
+            // Owner-only files become visible (or hidden) when the account changes.
+            if (ViewingFileId is { } id && _loaded) _ = LoadDetailAsync(id);
+        });
         UpdateAccount();
     }
 
@@ -40,36 +44,6 @@ public sealed partial class CatalogueViewModel : PageViewModel
     {
         IsSignedIn = services.Session.IsSignedIn;
         AccountText = IsSignedIn ? $"Signed in as {services.Session.UserName}" : "Not signed in";
-    }
-
-    [RelayCommand]
-    private async Task SignInAsync()
-    {
-        if (Views.SignInWindow.Show(services) && ViewingFileId is { } id) await LoadDetailAsync(id);
-    }
-
-    [RelayCommand]
-    private Task SignOutAsync() => GuardAsync(async () =>
-    {
-        await services.Session.SignOutAsync();
-        if (services.Credentials.Load() is { } saved) services.Credentials.Save(saved.UserName, null);
-        if (ViewingFileId is { } id && !services.Catalogue.IsPublic(id)) { Detail = null; Versions.Clear(); }
-        Status = "Signed out. Any saved password has been removed.";
-    });
-
-    /// <summary>Signs in silently with a password the user chose to remember.</summary>
-    private async Task TryAutoSignInAsync()
-    {
-        if (_triedAutoSignIn || services.Session.IsSignedIn) return;
-        _triedAutoSignIn = true;
-        if (services.Credentials.Load() is not { Password: { } password } saved) return;
-        try
-        {
-            var r = await services.Session.SignInAsync(saved.UserName, password);
-            if (r.Result == SignInResult.InvalidCredentials)
-                Status = "The saved Filehost password was rejected. Please sign in again.";
-        }
-        catch (HttpRequestException) { /* offline: stay signed out */ }
     }
 
     public ObservableCollection<FilehostFile> Results { get; } = [];
@@ -96,7 +70,6 @@ public sealed partial class CatalogueViewModel : PageViewModel
     public override async Task OnShownAsync()
     {
         if (!_loaded) await RefreshAsync(false);
-        await TryAutoSignInAsync();
     }
 
     [RelayCommand]
@@ -104,10 +77,13 @@ public sealed partial class CatalogueViewModel : PageViewModel
     {
         var snap = await services.Catalogue.LoadAsync(force);
         _loaded = true;
+        var keep = Category;
         Categories.Clear();
         Categories.Add("All");
         foreach (var c in services.Catalogue.Categories) Categories.Add(c);
-        OnPropertyChanged(nameof(Category)); // re-select after the list was rebuilt
+        // Clearing the list deselects the ComboBox, so restore the selection afterwards.
+        Category = keep is not null && Categories.Contains(keep) ? keep : "All";
+        OnPropertyChanged(nameof(Category));
         CacheInfo = snap.StaleReason is not null
             ? $"Offline – showing the copy from {snap.FetchedAt.LocalDateTime:g} ({snap.StaleReason})"
             : $"{snap.Files.Count} files · {(snap.FromCache ? "cached" : "fetched")} {snap.FetchedAt.LocalDateTime:g}";
