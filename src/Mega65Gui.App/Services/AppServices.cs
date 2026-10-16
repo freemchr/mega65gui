@@ -46,4 +46,30 @@ public sealed class AppServices
     public DeviceState Device { get; set; } = DeviceState.Unknown;
 
     public Mega65Commands? Commands => Tools.Current is { } t ? new Mega65Commands(t, Runner) : null;
+
+    /// <summary>Raised on the UI thread's caller when tools are installed, replaced or an install starts/ends.</summary>
+    public event Action? ToolsChanged;
+    public bool IsInstallingTools { get; private set; }
+
+    /// <summary>
+    /// Installs the official device tools from the Filehost. The development build is the default
+    /// because it includes etherload, which Ethernet features need.
+    /// </summary>
+    public async Task<ToolInstallation> InstallDeviceToolsAsync(ToolChannel channel = ToolChannel.Development, IProgress<string>? progress = null)
+    {
+        if (IsInstallingTools) throw new InvalidOperationException("The device tools are already being installed.");
+        IsInstallingTools = true;
+        ToolsChanged?.Invoke();
+        try
+        {
+            return await Tools.InstallFromFilehostAsync(Catalogue, Downloads, channel, progress);
+        }
+        finally
+        {
+            IsInstallingTools = false;
+            ToolsChanged?.Invoke();
+        }
+    }
+
+    public void NotifyToolsChanged() => ToolsChanged?.Invoke();
 }

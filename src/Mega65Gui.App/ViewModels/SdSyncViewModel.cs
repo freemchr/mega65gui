@@ -9,7 +9,7 @@ using Microsoft.Win32;
 
 namespace Mega65Gui.App.ViewModels;
 
-public sealed partial class SdSyncViewModel(AppServices services) : PageViewModel("SD Card Sync", "")
+public sealed partial class SdSyncViewModel(AppServices services) : PageViewModel("SD Card Sync", "\uE88E")
 {
     private SyncPlan? _plan;
 

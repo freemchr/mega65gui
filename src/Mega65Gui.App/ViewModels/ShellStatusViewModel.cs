@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net.Http;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -16,6 +17,7 @@ public sealed partial class ShellStatusViewModel : ObservableObject
     {
         _services = services;
         services.Session.Changed += () => Application.Current.Dispatcher.Invoke(Refresh);
+        services.ToolsChanged += () => Application.Current.Dispatcher.Invoke(Refresh);
         Refresh();
     }
 
@@ -31,7 +33,24 @@ public sealed partial class ShellStatusViewModel : ObservableObject
     /// <summary>Set by the shell so status lines can jump to their page.</summary>
     public Action<string>? Navigate { get; set; }
 
-    [RelayCommand] private void OpenTools() => Navigate?.Invoke("Tools");
+    [RelayCommand] private void OpenTools() => Navigate?.Invoke("Device Tools");
+
+    [ObservableProperty] private bool _installingTools;
+    [ObservableProperty] private string _installProgress = "";
+
+    [RelayCommand]
+    private async Task InstallToolsAsync()
+    {
+        Message = null;
+        try
+        {
+            await _services.InstallDeviceToolsAsync(progress: new Progress<string>(p => InstallProgress = p));
+        }
+        catch (Exception e) when (e is HttpRequestException or IOException or InvalidOperationException or InvalidDataException or UnauthorizedAccessException)
+        {
+            Message = $"Device tools could not be installed: {e.Message}";
+        }
+    }
     [RelayCommand] private void OpenDevice() => Navigate?.Invoke("Device");
     [ObservableProperty] private bool _toolsInstalled;
     [ObservableProperty] private string? _message;
@@ -52,6 +71,8 @@ public sealed partial class ShellStatusViewModel : ObservableObject
             : "No device connected";
 
         ToolsInstalled = _services.Tools.Current is not null;
+        InstallingTools = _services.IsInstallingTools;
+        if (!InstallingTools) InstallProgress = "";
         ToolsText = _services.Tools.Current is { } t ? $"Device tools {ShortVersion(t.Version)}" : "Device tools not installed";
     }
 

@@ -9,8 +9,11 @@ public sealed class AppPaths
         Directory.CreateDirectory(Root);
     }
 
-    public static AppPaths Default() => new(Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Mega65Gui"));
+    /// <summary>%LOCALAPPDATA%\Mega65Gui, or the folder in MEGA65GUI_HOME (used for testing with a clean profile).</summary>
+    public static AppPaths Default() => new(
+        Environment.GetEnvironmentVariable("MEGA65GUI_HOME") is { Length: > 0 } home
+            ? home
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Mega65Gui"));
 
     public string Root { get; }
     public string CatalogueCache => Ensure("cache", "catalogue");

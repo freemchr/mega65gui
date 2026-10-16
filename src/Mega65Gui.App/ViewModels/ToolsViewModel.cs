@@ -8,8 +8,16 @@ using Microsoft.Win32;
 
 namespace Mega65Gui.App.ViewModels;
 
-public sealed partial class ToolsViewModel(AppServices services) : PageViewModel("Tools", "")
+public sealed partial class ToolsViewModel : PageViewModel
 {
+    private readonly AppServices services;
+
+    public ToolsViewModel(AppServices services) : base("Device Tools", "\uE90F")
+    {
+        this.services = services;
+        services.ToolsChanged += () => System.Windows.Application.Current.Dispatcher.Invoke(() => Show(services.Tools.Current));
+    }
+
     public ObservableCollection<KeyValuePair<string, string>> Executables { get; } = [];
 
     [ObservableProperty] private string _installedText = "";
@@ -25,10 +33,9 @@ public sealed partial class ToolsViewModel(AppServices services) : PageViewModel
         Executables.Clear();
         if (t is null)
         {
-            InstalledText = "The official MEGA65 tools (m65, mega65_ftp, etherload) are not installed yet. Device features need them.";
+            InstalledText = "Not installed. The Device page needs the official MEGA65 command-line tools (m65, mega65_ftp, etherload) to talk to your MEGA65. Click Install device tools; the development build is recommended because it includes etherload for Ethernet.";
             return;
         }
-        (System.Windows.Application.Current.MainWindow?.DataContext as MainViewModel)?.Shell.Refresh();
         InstalledText = $"Version {t.Version ?? "unknown"} · {t.Source} · installed {t.InstalledAt.LocalDateTime:g}";
         foreach (var e in t.Executables.OrderBy(e => e.Key)) Executables.Add(e);
     }
@@ -39,8 +46,7 @@ public sealed partial class ToolsViewModel(AppServices services) : PageViewModel
     private Task InstallAsync(ToolChannel channel) => GuardAsync(async () =>
     {
         var progress = new Progress<string>(s => Status = s);
-        var t = await services.Tools.InstallFromFilehostAsync(services.Catalogue, services.Downloads, channel, progress);
-        Show(t);
+        await services.InstallDeviceToolsAsync(channel, progress);
         Status = "Installed.";
     }, "Installing…");
 
@@ -49,7 +55,12 @@ public sealed partial class ToolsViewModel(AppServices services) : PageViewModel
     {
         var dlg = new OpenFolderDialog { Title = "Folder containing m65.exe / mega65_ftp.exe" };
         if (dlg.ShowDialog() != true) return Task.CompletedTask;
-        return GuardAsync(async () => { Show(await services.Tools.UseFolderAsync(dlg.FolderName)); Status = "Using tools from folder."; });
+        return GuardAsync(async () =>
+        {
+            await services.Tools.UseFolderAsync(dlg.FolderName);
+            services.NotifyToolsChanged();
+            Status = "Using tools from folder.";
+        });
     }
 
     [RelayCommand]

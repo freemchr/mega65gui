@@ -9,8 +9,33 @@ using Microsoft.Win32;
 
 namespace Mega65Gui.App.ViewModels;
 
-public sealed partial class DeviceViewModel(AppServices services) : PageViewModel("Device", "")
+public sealed partial class DeviceViewModel : PageViewModel
 {
+    private readonly AppServices services;
+
+    public DeviceViewModel(AppServices services) : base("Device", "\uE7F4")
+    {
+        this.services = services;
+        services.ToolsChanged += () => System.Windows.Application.Current.Dispatcher.Invoke(UpdateTools);
+        UpdateTools();
+    }
+
+    [ObservableProperty] private bool _toolsMissing;
+    [ObservableProperty] private bool _installingTools;
+
+    private void UpdateTools()
+    {
+        ToolsMissing = services.Tools.Current is null;
+        InstallingTools = services.IsInstallingTools;
+    }
+
+    [RelayCommand]
+    private Task InstallToolsAsync() => GuardAsync(async () =>
+    {
+        await services.InstallDeviceToolsAsync(progress: new Progress<string>(p => Status = p));
+        Status = "Device tools installed.";
+    }, "Installing device tools…");
+
     public ObservableCollection<string> Ports { get; } = [];
     public ObservableCollection<string> EthernetDevices { get; } = [];
     public ObservableCollection<string> Output { get; } = [];
@@ -123,7 +148,7 @@ public sealed partial class DeviceViewModel(AppServices services) : PageViewMode
     }
 
     private Mega65Commands RequireTools() =>
-        services.Commands ?? throw new InvalidOperationException("Install the MEGA65 tools on the Tools page first.");
+        services.Commands ?? throw new InvalidOperationException("The device tools are not installed. Click Install device tools at the top of this page.");
 
     private Task RunToolAsync(Func<Mega65Commands, ConnectionTarget, Task<ProcessResult>> op, string busy, bool echo = true) => GuardAsync(async () =>
     {

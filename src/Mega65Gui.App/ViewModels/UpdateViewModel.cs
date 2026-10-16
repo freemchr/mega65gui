@@ -18,7 +18,7 @@ public sealed partial class StepRow(int number, string title) : ObservableObject
     [ObservableProperty] private string _detail = "";
 }
 
-public sealed partial class UpdateViewModel(AppServices services, IApprovalGate gate) : PageViewModel("Update My MEGA65", "")
+public sealed partial class UpdateViewModel(AppServices services, IApprovalGate gate) : PageViewModel("Update My MEGA65", "\uE895")
 {
     private CancellationTokenSource? _cts;
 

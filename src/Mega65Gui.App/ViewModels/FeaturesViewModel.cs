@@ -6,7 +6,7 @@ namespace Mega65Gui.App.ViewModels;
 
 public sealed class FeaturesViewModel : PageViewModel
 {
-    public FeaturesViewModel() : base("Features", "")
+    public FeaturesViewModel() : base("Features", "\uE9D5")
     {
         View = CollectionViewSource.GetDefaultView(FeatureCatalog.All);
         View.GroupDescriptions.Add(new PropertyGroupDescription(nameof(Feature.Area)));

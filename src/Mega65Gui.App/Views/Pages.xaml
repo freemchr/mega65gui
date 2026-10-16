@@ -229,6 +229,25 @@
                 <TextBlock Style="{StaticResource PageSubtitle}" Text="Connect over USB/JTAG or Ethernet, control the machine and manage its SD card remotely."/>
             </StackPanel>
             <ContentControl DockPanel.Dock="Bottom" Content="{Binding}" ContentTemplate="{StaticResource StatusFooter}"/>
+            <!-- Shown until the official tools are installed -->
+            <Border DockPanel.Dock="Top" CornerRadius="6" Padding="12,10" Margin="0,0,0,10" BorderThickness="1"
+                    Background="{DynamicResource SystemFillColorCautionBackgroundBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    Visibility="{Binding ToolsMissing, Converter={StaticResource BoolToVisible}}">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Style="{DynamicResource AccentButtonStyle}" Command="{Binding InstallToolsCommand}"
+                            IsEnabled="{Binding InstallingTools, Converter={StaticResource Not}}" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE896;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,6,0"/>
+                            <TextBlock Text="Install device tools"/>
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Text="&#xE7BA;" Style="{StaticResource Icon}" FontSize="18" Margin="0,0,12,0" Foreground="{DynamicResource SystemFillColorCautionBrush}"/>
+                    <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Text="Device tools needed" FontWeight="SemiBold"/>
+                        <TextBlock Style="{StaticResource Muted}" Text="Connecting to your MEGA65 uses the official command-line tools (m65, mega65_ftp, etherload). One click downloads them from the Filehost."/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
             <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="400"/><ColumnDefinition Width="12"/><ColumnDefinition/></Grid.ColumnDefinitions>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -379,15 +398,16 @@
     <!-- ================= Tools ================= -->
     <DataTemplate DataType="{x:Type vm:ToolsViewModel}">
         <StackPanel>
-            <TextBlock Text="MEGA65 Tools" Style="{StaticResource PageTitle}"/>
-            <TextBlock Style="{StaticResource PageSubtitle}" Text="The official command-line tools used for device features, downloaded from the Filehost."/>
+            <TextBlock Text="Device Tools" Style="{StaticResource PageTitle}"/>
+            <TextBlock Style="{StaticResource PageSubtitle}" Text="The official MEGA65 command-line tools the Device page uses to talk to your MEGA65, downloaded from the Filehost."/>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="{Binding InstalledText}" TextWrapping="Wrap" Margin="0,0,0,10"/>
                     <WrapPanel>
-                        <Button Content="Install release" Style="{DynamicResource AccentButtonStyle}" Command="{Binding InstallReleaseCommand}" Margin="0,0,6,6"/>
-                        <Button Content="Install development build" Command="{Binding InstallDevelopmentCommand}" Margin="0,0,6,6"
-                                ToolTip="The development build includes etherload, which Ethernet features need."/>
+                        <Button Content="Install device tools (recommended)" Style="{DynamicResource AccentButtonStyle}" Command="{Binding InstallDevelopmentCommand}" Margin="0,0,6,6"
+                                ToolTip="The current development build. It includes etherload, which Ethernet features need."/>
+                        <Button Content="Install 1.00 release instead" Command="{Binding InstallReleaseCommand}" Margin="0,0,6,6"
+                                ToolTip="The stable 1.00 release (August 2024). Older, but includes the same tools."/>
                         <Button Content="Use existing folder…" Command="{Binding UseFolderCommand}" Margin="0,0,6,6"/>
                         <Button Content="Open folder" Command="{Binding OpenFolderCommand}" Margin="0,0,6,6"/>
                     </WrapPanel>

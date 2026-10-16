@@ -45,24 +45,28 @@
                         <TextBlock Text="{Binding DeviceText}" FontSize="12" TextTrimming="CharacterEllipsis" MaxWidth="160"/>
                     </StackPanel>
                     </Button>
+                    <!-- Device tools: status when installed, an install action when not -->
                     <Button Style="{StaticResource FlatRow}" Command="{Binding OpenToolsCommand}" Margin="0,0,0,8"
-                            ToolTip="The official MEGA65 command-line tools (m65, mega65_ftp, etherload). Only the Device page needs them. Click to install or manage.">
-                    <StackPanel Orientation="Horizontal">
-                        <Ellipse>
-                            <Ellipse.Style>
-                                <Style TargetType="Ellipse" BasedOn="{StaticResource Dot}">
-                                    <Setter Property="Fill" Value="{StaticResource M65Orange}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ToolsInstalled}" Value="True">
-                                            <Setter Property="Fill" Value="{StaticResource M65Green}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Ellipse.Style>
-                        </Ellipse>
-                        <TextBlock Text="{Binding ToolsText}" FontSize="12"/>
-                    </StackPanel>
+                            ToolTip="The official MEGA65 command-line tools used by the Device page. Click to manage."
+                            Visibility="{Binding ToolsInstalled, Converter={StaticResource BoolToVisible}}">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Style="{StaticResource Dot}" Fill="{StaticResource M65Green}"/>
+                            <TextBlock Text="{Binding ToolsText}" FontSize="12"/>
+                        </StackPanel>
                     </Button>
+                    <StackPanel Margin="0,0,0,8" Visibility="{Binding ToolsInstalled, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}">
+                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Command="{Binding InstallToolsCommand}"
+                                IsEnabled="{Binding InstallingTools, Converter={StaticResource Not}}"
+                                ToolTip="Downloads the official MEGA65 command-line tools (m65, mega65_ftp, etherload) from the Filehost. The Device page needs them.">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE896;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0" Foreground="{StaticResource M65Orange}"/>
+                                <TextBlock Text="Install device tools" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                        <ProgressBar IsIndeterminate="True" Height="2" Margin="0,4,0,0" Visibility="{Binding InstallingTools, Converter={StaticResource BoolToVisible}}"/>
+                        <TextBlock Text="{Binding InstallProgress}" FontSize="11" Margin="2,2,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Visibility="{Binding InstallProgress, Converter={StaticResource NullToCollapsed}}"/>
+                    </StackPanel>
 
                     <!-- Account card -->
                     <Border CornerRadius="6" Padding="8,8,4,8" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
