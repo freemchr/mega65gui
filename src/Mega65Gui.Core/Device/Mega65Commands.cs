@@ -116,6 +116,15 @@ public sealed class Mega65Commands(ToolInstallation tools, IProcessRunner runner
         return await runner.RunAsync(exe, args, Long, output, ct, workingDirectory);
     }
 
+    /// <summary>Opens an interactive mega65_ftp session (holds the port until disposed).</summary>
+    public async Task<FtpSession> OpenFtpSessionAsync(ConnectionTarget t, CancellationToken ct = default)
+    {
+        var (tool, args) = FtpArgs(t, await FtpSupportsYesAsync(ct));
+        args.RemoveRange(args.Count - 2, 2); // no "-c exit": the session stays at the prompt
+        var exe = tools.PathOf(tool) ?? throw new FileNotFoundException("mega65_ftp is not installed. Install the device tools first.");
+        return await FtpSession.StartAsync(exe, args, ct);
+    }
+
     private Task<ProcessResult> Run((string Tool, List<string> Args) cmd, TimeSpan timeout, CancellationToken ct, IProgress<string>? output = null)
     {
         var exe = tools.PathOf(cmd.Tool) ?? throw new FileNotFoundException($"{cmd.Tool} is not installed. Install the MEGA65 tools first.");

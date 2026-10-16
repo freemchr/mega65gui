@@ -1,0 +1,137 @@
+<UserControl x:Class="Mega65Gui.App.Views.CardBrowserView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top">
+            <TextBlock Text="SD Card Browser" Style="{StaticResource PageTitle}"/>
+            <TextBlock Style="{StaticResource PageSubtitle}"
+                       Text="Your PC on the left, the SD card inside the MEGA65 on the right. Drag files between them, or from Windows Explorer onto the card."/>
+        </StackPanel>
+
+        <!-- Status and tool output -->
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+            <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource StatusFooter}"/>
+            <Expander Header="Card tool output" Margin="0,4,0,0">
+                <ListBox ItemsSource="{Binding Output}" Height="110" FontFamily="Cascadia Mono, Consolas" FontSize="11"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap"/></DataTemplate></ListBox.ItemTemplate>
+                </ListBox>
+            </Expander>
+        </DockPanel>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ======== PC ======== -->
+            <Border Style="{StaticResource Card}" Margin="0" Padding="8">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="&#xE7F8;" Style="{StaticResource Icon}" Margin="2,0,8,0" ToolTip="This PC"/>
+                        <TextBlock Grid.Column="1" Text="{Binding LocalPath}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding LocalPath}"/>
+                        <Button Grid.Column="2" Command="{Binding LocalUpCommand}" ToolTip="Up one folder" Margin="6,0,0,0"><TextBlock Text="&#xE74A;" Style="{StaticResource Icon}" FontSize="12"/></Button>
+                        <Button Grid.Column="3" Command="{Binding LocalRefreshCommand}" ToolTip="Refresh" Margin="4,0,0,0"><TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12"/></Button>
+                        <Button Grid.Column="4" Command="{Binding BrowseLocalCommand}" ToolTip="Choose folder" Margin="4,0,0,0"><TextBlock Text="&#xE8DA;" Style="{StaticResource Icon}" FontSize="12"/></Button>
+                    </Grid>
+                    <ListView x:Name="LocalList" ItemsSource="{Binding LocalItems}" SelectionMode="Extended" BorderThickness="0" Background="Transparent"
+                              ItemContainerStyle="{StaticResource CompactRow}" AllowDrop="True"
+                              MouseDoubleClick="LocalDoubleClick" PreviewMouseLeftButtonDown="DragStart" PreviewMouseMove="LocalDragMove" Drop="LocalDrop" DragOver="LocalDragOver">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Name" Width="230">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Width="20" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="&#xE8A5;"/>
+                                                            <Style.Triggers><DataTrigger Binding="{Binding IsDirectory}" Value="True"><Setter Property="Text" Value="&#xE8B7;"/></DataTrigger></Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                                <GridViewColumn Header="Size" Width="80" DisplayMemberBinding="{Binding Size, StringFormat={}{0:N0}}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </DockPanel>
+            </Border>
+
+            <!-- ======== transfer buttons ======== -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0">
+                <Button Command="{Binding UploadCommand}" CommandParameter="{Binding SelectedItems, ElementName=LocalList}" ToolTip="Upload the selected PC files to the card" Margin="0,0,0,8" Style="{DynamicResource AccentButtonStyle}">
+                    <TextBlock Text="&#xE72A;" Style="{StaticResource Icon}"/>
+                </Button>
+                <Button Command="{Binding DownloadSelectedCommand}" CommandParameter="{Binding SelectedItems, ElementName=RemoteList}" ToolTip="Download the selected card files to the PC folder">
+                    <TextBlock Text="&#xE72B;" Style="{StaticResource Icon}"/>
+                </Button>
+            </StackPanel>
+
+            <!-- ======== MEGA65 card ======== -->
+            <Border Grid.Column="2" Style="{StaticResource Card}" Margin="0" Padding="8">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="&#xE88E;" Style="{StaticResource Icon}" Margin="2,0,8,0" ToolTip="SD card in the MEGA65"/>
+                        <TextBlock Grid.Column="1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                            <Run Text="MEGA65:"/> <Run Text="{Binding RemotePath}"/>
+                        </TextBlock>
+                        <Button Grid.Column="2" Command="{Binding RemoteUpCommand}" ToolTip="Up one folder" Margin="6,0,0,0" IsEnabled="{Binding IsOpen}"><TextBlock Text="&#xE74A;" Style="{StaticResource Icon}" FontSize="12"/></Button>
+                        <Button Grid.Column="3" Command="{Binding RemoteRefreshCommand}" ToolTip="Refresh" Margin="4,0,0,0" IsEnabled="{Binding IsOpen}"><TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12"/></Button>
+                        <Button Grid.Column="4" Command="{Binding CloseCardCommand}" ToolTip="Close the card connection (resets the MEGA65)" Margin="4,0,0,0" IsEnabled="{Binding IsOpen}"><TextBlock Text="&#xE711;" Style="{StaticResource Icon}" FontSize="12"/></Button>
+                    </Grid>
+                    <WrapPanel DockPanel.Dock="Bottom" Margin="0,6,0,0" IsEnabled="{Binding IsOpen}">
+                        <Button Content="New folder" Command="{Binding NewFolderCommand}" Margin="0,0,4,4"/>
+                        <Button Content="Rename" Command="{Binding RenameCommand}" CommandParameter="{Binding SelectedItems, ElementName=RemoteList}" Margin="0,0,4,4"/>
+                        <Button Content="Delete" Command="{Binding DeleteCommand}" CommandParameter="{Binding SelectedItems, ElementName=RemoteList}" Margin="0,0,4,4"/>
+                        <Button Content="Mount D81" Command="{Binding MountCommand}" CommandParameter="{Binding SelectedItems, ElementName=RemoteList}" Margin="0,0,4,4" ToolTip="Mount the selected disk image as drive 8"/>
+                        <Button Content="Info" Command="{Binding InfoCommand}" CommandParameter="{Binding SelectedItems, ElementName=RemoteList}" Margin="0,0,4,4" ToolTip="Show where the file is stored on the card (fragmentation)"/>
+                    </WrapPanel>
+                    <Grid>
+                        <ListView x:Name="RemoteList" ItemsSource="{Binding RemoteItems}" SelectionMode="Extended" BorderThickness="0" Background="Transparent"
+                                  ItemContainerStyle="{StaticResource CompactRow}" AllowDrop="True"
+                                  MouseDoubleClick="RemoteDoubleClick" PreviewMouseLeftButtonDown="DragStart" PreviewMouseMove="RemoteDragMove" Drop="RemoteDrop" DragOver="RemoteDragOver">
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="Name" Width="230">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" ToolTip="{Binding ShortName}">
+                                                    <TextBlock Width="20" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="&#xE8A5;"/>
+                                                                <Style.Triggers><DataTrigger Binding="{Binding IsDirectory}" Value="True"><Setter Property="Text" Value="&#xE8B7;"/></DataTrigger></Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Size" Width="80" DisplayMemberBinding="{Binding Size, StringFormat={}{0:N0}}"/>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                        <!-- Shown until the card is opened -->
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}">
+                            <TextBlock Text="&#xE88E;" Style="{StaticResource Icon}" FontSize="28" HorizontalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                            <TextBlock Text="The MEGA65's SD card is not open" HorizontalAlignment="Center" Margin="0,8,0,4"/>
+                            <TextBlock Style="{StaticResource Muted}" HorizontalAlignment="Center" TextAlignment="Center" MaxWidth="280"
+                                       Text="Opening loads a small helper into the MEGA65's memory; the MEGA65 is reset when the connection closes."/>
+                            <Button Content="Open card" Style="{DynamicResource AccentButtonStyle}" Command="{Binding OpenCardCommand}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </DockPanel>
+</UserControl>

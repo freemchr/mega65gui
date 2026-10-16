@@ -387,6 +387,11 @@
         </DockPanel>
     </DataTemplate>
 
+    <!-- ================= SD card browser ================= -->
+    <DataTemplate DataType="{x:Type vm:CardBrowserViewModel}">
+        <v:CardBrowserView/>
+    </DataTemplate>
+
     <!-- ================= SD card sync ================= -->
     <DataTemplate DataType="{x:Type vm:SdSyncViewModel}">
         <DockPanel>

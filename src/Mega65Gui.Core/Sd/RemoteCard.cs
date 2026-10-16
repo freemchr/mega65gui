@@ -55,7 +55,8 @@ public sealed partial class Mega65FtpCard(Mega65Commands commands, ConnectionTar
     }
 
     // "     25333 | 2024-06-30 17:55:16  | AUDIOMIX.M65 | " or "<DIR> | … | CPC4ME~1 | cpc4mega65"
-    [GeneratedRegex(@"^\s*(?<size>\d+|<DIR>)\s*\|\s*(?<date>[^|]*)\|\s*(?<short>[^|]*?)\s*\|\s*(?<long>[^|]*?)\s*$", RegexOptions.Multiline)]
+    // Horizontal whitespace only: an empty long-name column must not swallow the next line.
+    [GeneratedRegex(@"^[ \t]*(?<size>\d+|<DIR>)[ \t]*\|[ \t]*(?<date>[^|\n]*)\|[ \t]*(?<short>[^|\n]*?)[ \t]*\|[ \t]*(?<long>[^|\n]*?)[ \t]*$", RegexOptions.Multiline)]
     private static partial Regex DirLine();
 
     internal static IReadOnlyList<RemoteEntry> ParseDir(string output) =>

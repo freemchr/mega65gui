@@ -53,9 +53,49 @@ public sealed class AppServices
     /// <summary>Raised on the UI thread whenever the connection or device state changes.</summary>
     public event Action? ConnectionChanged;
 
+    // ---- mega65_ftp session (SD card browser). It holds the serial port, so anything else that
+    // needs the port closes it first via CloseFtpSessionAsync.
+    private FtpSession? _ftp;
+    private readonly SemaphoreSlim _ftpLock = new(1, 1);
+
+    public bool HasFtpSession => _ftp is { IsOpen: true };
+    public FtpSession? CurrentFtpSession => _ftp;
+    public event Action? FtpSessionChanged;
+
+    public async Task<FtpSession> GetFtpSessionAsync(CancellationToken ct = default)
+    {
+        await _ftpLock.WaitAsync(ct);
+        try
+        {
+            if (_ftp is { IsOpen: true }) return _ftp;
+            var target = Connection ?? throw new InvalidOperationException("Connect to the MEGA65 first.");
+            var commands = Commands ?? throw new InvalidOperationException("Install the device tools first.");
+            _ftp = await commands.OpenFtpSessionAsync(target, ct);
+            FtpSessionChanged?.Invoke();
+            return _ftp;
+        }
+        finally { _ftpLock.Release(); }
+    }
+
+    /// <summary>Ends the browser session (the MEGA65 resets as the helper unloads).</summary>
+    public async Task CloseFtpSessionAsync()
+    {
+        await _ftpLock.WaitAsync();
+        try
+        {
+            if (_ftp is null) return;
+            var s = _ftp;
+            _ftp = null;
+            await s.DisposeAsync();
+            FtpSessionChanged?.Invoke();
+        }
+        finally { _ftpLock.Release(); }
+    }
+
     /// <summary>Connects over USB/JTAG and reads model, core and ROM (read-only monitor commands).</summary>
     public async Task<DeviceState> ConnectSerialAsync(string port, CancellationToken ct = default)
     {
+        await CloseFtpSessionAsync();
         var target = ConnectionTarget.Serial(port);
         var state = await Task.Run(() => new DeviceProbe().ProbeAsync(target, ct), ct);
         SetConnection(target, state);
@@ -64,6 +104,7 @@ public sealed class AppServices
 
     public void SetConnection(ConnectionTarget? target, DeviceState state, string? lostPort = null)
     {
+        if (target is null && _ftp is not null) _ = CloseFtpSessionAsync();
         Connection = target;
         Device = target is null ? DeviceState.Unknown : state with { Connection = target };
         LostPort = target is null ? lostPort : null;

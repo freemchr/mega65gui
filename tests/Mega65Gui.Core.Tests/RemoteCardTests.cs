@@ -27,6 +27,8 @@ public sealed class RemoteCardTests : IDisposable
         Assert.Equal(5, entries.Count);
         Assert.True(entries[0].IsDirectory);
         Assert.Equal(25333, entries.Single(e => e.Matches("AUDIOMIX.M65")).Size);
+        Assert.Equal("", entries.Single(e => e.ShortName == "AUDIOMIX.M65").LongName); // must not swallow the next line
+        Assert.Equal("AUDIOMIX.M65", entries.Single(e => e.ShortName == "AUDIOMIX.M65").Name);
         Assert.True(entries.Single(e => e.ShortName == "MEGA65~1.COR").Matches("mega65r6-20250919.07-r-0.97.2-03b24c6.cor"));
     }
 

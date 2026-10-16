@@ -10,10 +10,11 @@ public sealed partial class MainViewModel : ObservableObject
         Update = new UpdateViewModel(services, new WpfApprovalGate());
         Catalogue = new CatalogueViewModel(services);
         Device = new DeviceViewModel(services);
+        CardBrowser = new CardBrowserViewModel(services);
         SdSync = new SdSyncViewModel(services);
         Tools = new ToolsViewModel(services);
         Features = new FeaturesViewModel();
-        Pages = [Update, Catalogue, Device, SdSync, Tools, Features];
+        Pages = [Update, Catalogue, Device, CardBrowser, SdSync, Tools, Features];
         Shell = new ShellStatusViewModel(services)
         {
             Navigate = title => Selected = Pages.First(p => p.Title == title),
@@ -26,12 +27,19 @@ public sealed partial class MainViewModel : ObservableObject
     public UpdateViewModel Update { get; }
     public CatalogueViewModel Catalogue { get; }
     public DeviceViewModel Device { get; }
+    public CardBrowserViewModel CardBrowser { get; }
     public SdSyncViewModel SdSync { get; }
     public ToolsViewModel Tools { get; }
     public FeaturesViewModel Features { get; }
     public IReadOnlyList<PageViewModel> Pages { get; }
 
     [ObservableProperty] private PageViewModel _selected;
+
+    partial void OnSelectedChanging(PageViewModel value)
+    {
+        // Leaving the card browser releases the serial port for everything else.
+        if (_selected == CardBrowser && value != CardBrowser) _ = CardBrowser.OnHiddenAsync();
+    }
 
     partial void OnSelectedChanged(PageViewModel value)
     {

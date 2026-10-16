@@ -208,6 +208,7 @@ public sealed partial class DeviceViewModel : PageViewModel
     private Task RunToolAsync(Func<Mega65Commands, ConnectionTarget, Task<ProcessResult>> op, string busy, bool echo = true) => GuardAsync(async () =>
     {
         var target = services.Connection ?? throw new InvalidOperationException("Connect to a MEGA65 first.");
+        await services.CloseFtpSessionAsync();
         var r = await op(RequireTools(), target);
         if (echo)
             foreach (var line in (r.StdOut + r.StdErr).Split('\n', StringSplitOptions.RemoveEmptyEntries).TakeLast(40))
