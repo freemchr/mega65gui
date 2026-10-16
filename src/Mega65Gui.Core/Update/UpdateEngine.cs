@@ -63,10 +63,11 @@ public sealed class UpdateEngine(
         finally
         {
             _report.Finished = DateTimeOffset.Now;
-            Set(12, StepStatus.Running, "Writing report");
+            // Mark the step done with its path before writing, so the saved report records it as done.
+            Set(12, StepStatus.Done, ReportStem(_report) + ".md");
             try
             {
-                Set(12, StepStatus.Done, await SaveReportAsync(_report, CancellationToken.None));
+                await SaveReportAsync(_report, CancellationToken.None);
             }
             catch (Exception e)
             {
@@ -219,7 +220,10 @@ public sealed class UpdateEngine(
             Set(10, StepStatus.Skipped, "No core staged.");
         else
         {
-            _report.GuidedInstructions = GuidedFlashInstructions(model, stagedCore);
+            _report.GuidedInstructions = GuidedFlashInstructions(model, stagedCore)
+                + (_report.Core == CoreComparison.InstalledUnknown
+                    ? $"\nThe running core could not be read. If MEGAINFO on your MEGA65 already shows release {candidate.Info.Release} ({candidate.Info.CommitHash}), there is nothing to flash."
+                    : "");
             Set(10, StepStatus.NeedsUser, _report.GuidedInstructions);
         }
 
@@ -341,9 +345,11 @@ public sealed class UpdateEngine(
         StepChanged?.Invoke(rec);
     }
 
+    private string ReportStem(UpdateReport report) => Path.Combine(paths.Reports, $"update-{report.Started:yyyyMMdd-HHmmss}");
+
     private async Task<string> SaveReportAsync(UpdateReport report, CancellationToken ct)
     {
-        var stem = Path.Combine(paths.Reports, $"update-{report.Started:yyyyMMdd-HHmmss}");
+        var stem = ReportStem(report);
         var json = JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true, Converters = { new JsonStringEnumConverter() } });
         await File.WriteAllTextAsync(stem + ".json", json, ct);
         await File.WriteAllTextAsync(stem + ".md", ToMarkdown(report), ct);

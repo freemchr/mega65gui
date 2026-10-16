@@ -90,7 +90,9 @@ public sealed class UpdateEngineTests : IDisposable
         Assert.Equal(StepStatus.NeedsUser, report.Steps.Single(s => s.Number == 10).Status);
         Assert.Equal(StepStatus.Done, report.Steps.Single(s => s.Number == 11).Status);
         Assert.Equal(12, report.Steps.Count);
-        Assert.True(File.Exists(report.Steps.Single(s => s.Number == 12).Detail));
+        var reportFile = report.Steps.Single(s => s.Number == 12).Detail;
+        Assert.True(File.Exists(reportFile));
+        Assert.DoesNotContain("| Running |", File.ReadAllText(reportFile));
         Assert.Equal(3, gate.Prompts); // summary, SD changes, core staging
     }
 

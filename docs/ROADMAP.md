@@ -20,7 +20,7 @@ Each item needs a real MEGA65, and its findings go back into `FeatureCatalog`.
 3. Confirm `etherload -D` and the mega65_ftp `-e` console on core 0.97.x.
 4. Confirm the contiguity checker on a freshly formatted card and on a fragmented one.
 5. Run the full Update My MEGA65 flow on a real card, then flash in MEGAFLASH.
-6. ~~Sign in with a real Filehost account~~ and ~~check the with-ROM package layout~~ (done). Still to do: a with-ROM update on a real card.
+6. ~~Sign in with a real Filehost account~~ and ~~check the with-ROM package layout~~ (done). A with-ROM update on a copy of a real card also passed (2026-10-16). Still to do: the same on the physical card, then MEGAFLASH.
 
 ## Release 0.2: M65Connect parity
 

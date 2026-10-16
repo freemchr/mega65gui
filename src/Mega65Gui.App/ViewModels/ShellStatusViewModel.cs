@@ -26,7 +26,13 @@ public sealed partial class ShellStatusViewModel : ObservableObject
     [ObservableProperty] private string _initial = "?";
     [ObservableProperty] private string _deviceText = "No device";
     [ObservableProperty] private bool _deviceConnected;
-    [ObservableProperty] private string _toolsText = "Tools not installed";
+    [ObservableProperty] private string _toolsText = "Device tools not installed";
+
+    /// <summary>Set by the shell so status lines can jump to their page.</summary>
+    public Action<string>? Navigate { get; set; }
+
+    [RelayCommand] private void OpenTools() => Navigate?.Invoke("Tools");
+    [RelayCommand] private void OpenDevice() => Navigate?.Invoke("Device");
     [ObservableProperty] private bool _toolsInstalled;
     [ObservableProperty] private string? _message;
 
@@ -46,7 +52,7 @@ public sealed partial class ShellStatusViewModel : ObservableObject
             : "No device connected";
 
         ToolsInstalled = _services.Tools.Current is not null;
-        ToolsText = _services.Tools.Current is { } t ? $"Tools {ShortVersion(t.Version)}" : "Tools not installed";
+        ToolsText = _services.Tools.Current is { } t ? $"Device tools {ShortVersion(t.Version)}" : "Device tools not installed";
     }
 
     private static string ShortVersion(string? v) => v is null ? "installed" : v.Split('-')[0];

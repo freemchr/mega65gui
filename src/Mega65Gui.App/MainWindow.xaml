@@ -27,7 +27,9 @@
                 <!-- Footer: device, tools, account (always visible) -->
                 <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,12" DataContext="{Binding Shell}">
                     <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,10"/>
-                    <StackPanel Orientation="Horizontal" Margin="6,0,0,6" ToolTip="Device connection (Device page)">
+                    <Button Style="{StaticResource FlatRow}" Command="{Binding OpenDeviceCommand}" Margin="0,0,0,2"
+                            ToolTip="Device connection. Click to open the Device page.">
+                    <StackPanel Orientation="Horizontal">
                         <Ellipse>
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse" BasedOn="{StaticResource Dot}">
@@ -42,7 +44,10 @@
                         </Ellipse>
                         <TextBlock Text="{Binding DeviceText}" FontSize="12" TextTrimming="CharacterEllipsis" MaxWidth="160"/>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="6,0,0,10" ToolTip="Official MEGA65 tools (Tools page)">
+                    </Button>
+                    <Button Style="{StaticResource FlatRow}" Command="{Binding OpenToolsCommand}" Margin="0,0,0,8"
+                            ToolTip="The official MEGA65 command-line tools (m65, mega65_ftp, etherload). Only the Device page needs them. Click to install or manage.">
+                    <StackPanel Orientation="Horizontal">
                         <Ellipse>
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse" BasedOn="{StaticResource Dot}">
@@ -57,6 +62,7 @@
                         </Ellipse>
                         <TextBlock Text="{Binding ToolsText}" FontSize="12"/>
                     </StackPanel>
+                    </Button>
 
                     <!-- Account card -->
                     <Border CornerRadius="6" Padding="8,8,4,8" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"

@@ -14,7 +14,10 @@ public sealed partial class MainViewModel : ObservableObject
         Tools = new ToolsViewModel(services);
         Features = new FeaturesViewModel();
         Pages = [Update, Catalogue, Device, SdSync, Tools, Features];
-        Shell = new ShellStatusViewModel(services);
+        Shell = new ShellStatusViewModel(services)
+        {
+            Navigate = title => Selected = Pages.First(p => p.Title == title),
+        };
         _selected = Update;
     }
 
