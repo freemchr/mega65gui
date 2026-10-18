@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <!-- MEGA65 GUI icon: the badge's four stripes on its black background -->
-  <rect x="0" y="0" width="256" height="256" rx="56" fill="#0c0c0c"/>
-  <polygon points="89,76 220,76 207,101 76,101" fill="#1e64ff"/>
-  <polygon points="72,104 209,104 196,129 59,129" fill="#00dc3c"/>
-  <polygon points="55,132 198,132 185,157 42,157" fill="#fff000"/>
-  <polygon points="38,160 187,160 174,180 30,180" fill="#ff5000"/>
-</svg>
