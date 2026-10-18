@@ -75,24 +75,52 @@ public partial class App : Application
     private async Task RenderPagesAsync(Window window, MainViewModel vm, string folder)
     {
         Directory.CreateDirectory(folder);
+        // Signed in (with a remembered password), the upload page has something to show.
+        await vm.Shell.TryAutoSignInAsync();
         foreach (var page in vm.Pages)
         {
             vm.Selected = page;
             await page.OnShownAsync();
             if (page is CatalogueViewModel cat)
                 cat.SelectedFile = cat.Results.FirstOrDefault(f => f.Title.Contains("Release Package (mega65r6)"));
-            await Task.Delay(300);
-            for (var n = 0; n < 50 && page.IsBusy; n++) await Task.Delay(200);
-            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-            var dpi = VisualTreeHelper.GetDpi(window);
-            var bmp = new RenderTargetBitmap((int)(window.ActualWidth * dpi.DpiScaleX), (int)(window.ActualHeight * dpi.DpiScaleY),
-                dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
-            bmp.Render(window);
-            var enc = new PngBitmapEncoder();
-            enc.Frames.Add(BitmapFrame.Create(bmp));
-            await using var fs = File.Create(Path.Combine(folder, $"{vm.Pages.ToList().IndexOf(page) + 1}-{page.Title.Replace(' ', '-')}.png"));
-            enc.Save(fs);
+            var name = $"{vm.Pages.ToList().IndexOf(page) + 1}-{page.Title.Replace(' ', '-')}";
+            await CaptureAsync(window, page, Path.Combine(folder, $"{name}.png"));
+
+            if (page is MyUploadsViewModel up && up.IsSignedIn)
+            {
+                // Read-only states: a new file filled from GitHub (nothing is uploaded) and a new version.
+                up.NewFileCommand.Execute(null);
+                up.GitHubRepo = "https://github.com/freemchr/MegaZXNext";
+                await up.FillFromGitHubCommand.ExecuteAsync(null);
+                await CaptureAsync(window, page, Path.Combine(folder, $"{name}-new-file.png"));
+
+                up.StartNewVersionCommand.Execute(null);
+                up.SelectedFile = up.Files.FirstOrDefault(f => f.DisplayTitle.StartsWith("Mega ST", StringComparison.OrdinalIgnoreCase)) ?? up.Files.FirstOrDefault();
+                await CaptureAsync(window, page, Path.Combine(folder, $"{name}-new-version.png"));
+                up.ChangeTaskCommand.Execute(null);
+            }
         }
         Shutdown();
+    }
+
+    private async Task CaptureAsync(Window window, PageViewModel page, string file)
+    {
+        await Task.Delay(300);
+        for (var n = 0; n < 100 && page.IsBusy; n++) await Task.Delay(200);
+        // Give preview thumbnails time to download.
+        await Task.Delay(1500);
+        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        var dpi = VisualTreeHelper.GetDpi(window);
+        var bmp = new RenderTargetBitmap((int)(window.ActualWidth * dpi.DpiScaleX), (int)(window.ActualHeight * dpi.DpiScaleY),
+            dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+        bmp.Render(window);
+        // The window's frame renders as a white edge on the right and bottom: keep the content area only.
+        var content = (FrameworkElement)window.Content;
+        var crop = new CroppedBitmap(bmp, new Int32Rect(0, 0,
+            Math.Min(bmp.PixelWidth, (int)(content.ActualWidth * dpi.DpiScaleX)), Math.Min(bmp.PixelHeight, (int)(content.ActualHeight * dpi.DpiScaleY))));
+        var enc = new PngBitmapEncoder();
+        enc.Frames.Add(BitmapFrame.Create(crop));
+        await using var fs = File.Create(file);
+        enc.Save(fs);
     }
 }

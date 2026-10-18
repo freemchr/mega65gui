@@ -1,4 +1,4 @@
-# MEGA65 GUI
+<h1 align="center"><img src="docs/logo.png" alt="MEGA65 GUI" width="600"></h1>
 
 Created by **Chris Freeman**.
 
@@ -20,8 +20,10 @@ It brings together:
 
 | | |
 |---|---|
-| ![Update My MEGA65](docs/screenshots/update.png) | ![Filehost](docs/screenshots/filehost.png) |
-| **Update My MEGA65:** the 12-step guided update | **Filehost:** browse, search and download |
+| ![Update My MEGA65](docs/screenshots/update.png) | ![MEGA65 File Host](docs/screenshots/filehost.png) |
+| **Update My MEGA65:** the 12-step guided update | **MEGA65 File Host:** browse, search and download |
+| ![Upload a new file from GitHub](docs/screenshots/upload-new-file.png) | ![Upload a new version](docs/screenshots/upload-new-version.png) |
+| **File Host Upload:** a new file filled in from a GitHub release | **File Host Upload:** a new version, with previews |
 | ![Device](docs/screenshots/device.png) | ![Features](docs/screenshots/features.png) |
 | **Device:** connect, control and load files | **Features:** what is implemented and verified |
 
@@ -45,6 +47,15 @@ It brings together:
 - Download into a local cache that also works offline.
 - Sign in with your own account to reach owner-only packages, such as releases that include the closed ROM.
 
+### MEGA65 File Host Upload (for developers)
+
+- Upload a new file, or a new version of one of your files, straight to the Filehost, with every field the website's My File Uploads has: title, type, description, search tags, short link, PAL/NTSC, platforms, access, core and ROM version, intro disk and highscore.
+- **Fill from GitHub:** paste a repository link and the newest release is downloaded and filled in: title, description (release notes converted to the Filehost's format), suggested search tags, version and comment.
+- **Sync from GitHub:** link a file to its repository and each new release is uploaded as a new version, optionally checked when the app starts.
+- Add, view and delete previews (screenshots, video or audio, or a video link).
+- A Website Preview shows the description as the Filehost will show it.
+- You choose the task first, and nothing is uploaded or changed until you confirm.
+
 ### Device
 
 - Connect over USB/JTAG or Ethernet.
@@ -60,6 +71,7 @@ Installs the official mega65-tools builds from the Filehost.
 - **You approve every write.** Planning is read-only.
 - **Nothing on your card is deleted.** Replaced files are backed up first.
 - **FPGA flash is never written automatically.** The official tools cannot flash R4–R6 from a PC, so the app guides you through MEGAFLASH.
+- **Uploads to the Filehost need your confirmation every time,** including GitHub syncs, and go only to your own files.
 - **Owner-only Filehost downloads (the closed ROM) use your own Filehost account.** You sign in inside the app and the Filehost decides what you can download. Your password is never stored unless you ask, and then only DPAPI-encrypted.
 
 ## Documentation

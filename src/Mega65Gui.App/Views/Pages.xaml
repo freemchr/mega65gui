@@ -152,7 +152,7 @@
                     <ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="150"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel VerticalAlignment="Center" Margin="0,0,20,0">
-                    <TextBlock Text="Filehost" Style="{StaticResource PageTitle}"/>
+                    <TextBlock Text="MEGA65 File Host" Style="{StaticResource PageTitle}"/>
                     <TextBlock Text="{Binding CacheInfo}" Style="{StaticResource Muted}"/>
                 </StackPanel>
                 <Grid Grid.Column="1" Margin="0,0,6,0" VerticalAlignment="Center">
@@ -168,7 +168,9 @@
             </Grid>
             <ContentControl DockPanel.Dock="Bottom" Content="{Binding}" ContentTemplate="{StaticResource StatusFooter}"/>
             <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="11*"/><ColumnDefinition Width="10"/><ColumnDefinition Width="9*"/></Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="11*" MinWidth="240"/><ColumnDefinition Width="10"/><ColumnDefinition Width="9*" MinWidth="260"/></Grid.ColumnDefinitions>
+                <GridSplitter Grid.Column="1" Width="10" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext"
+                              ToolTip="Drag to resize the list and the details"/>
                 <Border Style="{StaticResource Card}" Padding="2" Margin="0">
                     <ListView ItemContainerStyle="{StaticResource CompactRow}" ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedFile}" BorderThickness="0" Background="Transparent">
                         <ListView.View>
@@ -220,7 +222,7 @@
                                                Visibility="{Binding Detail.IsAvailable, Converter={StaticResource BoolToVisible}}">
                                         <Run Text="{Binding Detail.Category}"/> · <Run Text="{Binding Detail.Type}"/> · <Run Text="{Binding Detail.Author}"/> · <Run Text="{Binding Detail.Downloads}"/> downloads
                                     </TextBlock>
-                                    <TextBlock Text="{Binding Detail.PlainDescription}" TextWrapping="Wrap" FontSize="12.5" MaxHeight="220"/>
+                                    <TextBlock v:FilehostText.Text="{Binding Detail.Description}" TextWrapping="Wrap" FontSize="12.5" MaxHeight="220"/>
 
                                     <StackPanel Visibility="{Binding LinkedFiles.Count, Converter={StaticResource NullToCollapsed}}" Margin="0,10,0,0">
                                         <TextBlock Text="Linked files" Style="{StaticResource SectionTitle}"/>
@@ -273,6 +275,345 @@
                         </DockPanel>
                     </Grid>
                 </Border>
+            </Grid>
+        </DockPanel>
+    </DataTemplate>
+
+    <!-- ================= MEGA65 File Host Upload ================= -->
+    <DataTemplate DataType="{x:Type vm:MyUploadsViewModel}">
+        <DockPanel>
+            <StackPanel DockPanel.Dock="Top">
+                <TextBlock Text="MEGA65 File Host Upload" Style="{StaticResource PageTitle}"/>
+                <TextBlock Style="{StaticResource PageSubtitle}" Text="Your own files on the Filehost: upload a new file or a new version, edit its details, or link it to GitHub so new releases are uploaded for you."/>
+                <Expander Header="How to use this page" Style="{StaticResource PageHelp}">
+                    <StackPanel Margin="24,6,0,0" MaxWidth="900" HorizontalAlignment="Left">
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="What it is"/><Run Text=" – The same as My File Uploads on files.mega65.org, for developers who publish cores, ROMs and programs. Sign in with your Filehost account first."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Start with the task"/><Run Text=" – First choose what you want to do: upload a new file, upload a new version, or edit details. The page then only shows what that task needs, and the heading names the file it works on."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="New version"/><Run Text=" – Choose the file on the left, choose the new file, check the version number and press Upload version. Create new version adds it and makes it active; Replace latest version deletes the latest one."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="New file"/><Run Text=" – Choose the file to upload (or fill it from GitHub), fill in title, type, description, platform and access, then press Upload new file."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Details"/><Run Text=" – Change the attributes and press Save details. They are also saved with every upload, as on the website."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Fill from GitHub"/><Run Text=" – Paste a repository link and press Fill from GitHub: the newest release file is downloaded and the title, description, search tags, version and comment are filled in from GitHub. Check them, then upload."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="GitHub link"/><Run Text=" – Link a file to its GitHub repository and the release file to use (such as MegaST-*.zip). Sync uploads the newest release as a new version if it is not on the Filehost yet. The version number is taken from the tag (v1.2 becomes 1.2)."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Safety"/><Run Text=" – Nothing is uploaded or changed on the Filehost until you confirm it. Previews, deleting files and versions, and choosing the active version are done on the website."/></TextBlock>
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
+            <ContentControl DockPanel.Dock="Bottom" Content="{Binding}" ContentTemplate="{StaticResource StatusFooter}"/>
+            <ProgressBar DockPanel.Dock="Bottom" Height="4" Maximum="100" Value="{Binding UploadPercent}" Margin="0,6,0,0"
+                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisible}}"/>
+
+            <Border DockPanel.Dock="Top" Style="{StaticResource Card}" Visibility="{Binding IsSignedIn, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding AccountText}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <Button Content="Sign in…" Command="{Binding SignInCommand}" Style="{DynamicResource AccentButtonStyle}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- The task bar: say what you want to do first, so nothing acts on a file by accident -->
+            <Border DockPanel.Dock="Top" Style="{StaticResource Card}" Visibility="{Binding IsSignedIn, Converter={StaticResource BoolToVisible}}">
+                <DockPanel>
+                    <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center">
+                        <Button Content="Change task" Command="{Binding ChangeTaskCommand}" Margin="6,0,0,0"
+                                Visibility="{Binding IsChoosing, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}"/>
+                        <Button Command="{Binding RefreshCommand}" ToolTip="Reload your files from the Filehost" Margin="6,0,0,0">
+                            <TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12"/>
+                        </Button>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding TaskHeading}" Style="{StaticResource SectionTitle}" VerticalAlignment="Center" Margin="0" TextTrimming="CharacterEllipsis"/>
+                </DockPanel>
+            </Border>
+
+            <Grid IsEnabled="{Binding IsSignedIn}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                <DockPanel Width="260" Margin="0,0,10,0" Visibility="{Binding ShowFileList, Converter={StaticResource BoolToVisible}}">
+                    <TextBlock DockPanel.Dock="Top" Text="Choose the file" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock DockPanel.Dock="Top" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,6"
+                               Text="Your files on the Filehost."/>
+                    <Border Style="{StaticResource Card}" Padding="2" Margin="0">
+                        <ListBox ItemsSource="{Binding Files}" SelectedItem="{Binding SelectedFile}" DisplayMemberPath="DisplayTitle" BorderThickness="0" Background="Transparent"/>
+                    </Border>
+                </DockPanel>
+
+                <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,0,8,0">
+                        <!-- Choose a task -->
+                        <StackPanel Visibility="{Binding IsChoosing, Converter={StaticResource BoolToVisible}}" MaxWidth="760" HorizontalAlignment="Left">
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="Upload a new file" Command="{Binding NewFileCommand}" Style="{DynamicResource AccentButtonStyle}" MinWidth="190" VerticalAlignment="Center"/>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <TextBlock Text="Upload a new file" FontWeight="SemiBold"/>
+                                        <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Text="Publish something that is not on the Filehost yet, such as a new core. Fill it in yourself or from a GitHub release."/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="Upload a new version" Command="{Binding StartNewVersionCommand}" MinWidth="190" VerticalAlignment="Center"/>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <TextBlock Text="Upload a new version of one of your files" FontWeight="SemiBold"/>
+                                        <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Text="Add a newer release to a file you already published. You choose the file next."/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="Edit details" Command="{Binding StartEditDetailsCommand}" MinWidth="190" VerticalAlignment="Center"/>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <TextBlock Text="Edit the details of one of your files" FontWeight="SemiBold"/>
+                                        <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Text="Change the title, description, platform, access and the other attributes, or its GitHub link. Nothing is uploaded."/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="Sync from GitHub" Command="{Binding SyncAllCommand}" MinWidth="190" VerticalAlignment="Center"/>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <TextBlock Text="Upload new GitHub releases" FontWeight="SemiBold"/>
+                                        <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Text="For every file linked to GitHub, uploads the newest release as a new version if it is not on the Filehost yet. You are asked first."/>
+                                        <CheckBox Content="Check GitHub when MEGA65 GUI starts" IsChecked="{Binding CheckAtStartup}" Margin="0,6,0,0"
+                                                  ToolTip="Needs a remembered password. You are still asked before anything is uploaded."/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,0" Text="Choose a file on the left."
+                                   Visibility="{Binding NeedsFileChoice, Converter={StaticResource BoolToVisible}}"/>
+
+                        <!-- Upload -->
+                        <Border Style="{StaticResource Card}" Visibility="{Binding ShowUpload, Converter={StaticResource BoolToVisible}}">
+                            <StackPanel>
+                                <TextBlock Text="File to upload" Style="{StaticResource SectionTitle}"/>
+                                <Grid Margin="0,4,0,4">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                                    <TextBlock Text="GitHub" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                    <TextBox Grid.Column="1" Text="{Binding GitHubRepo, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,6"
+                                             ToolTip="Optional: https://github.com/owner/repo. Fill from GitHub takes the newest release and fills in this page."/>
+                                    <Button Grid.Column="2" Content="Fill from GitHub" Command="{Binding FillFromGitHubCommand}" Margin="0,0,0,6"/>
+                                    <TextBlock Grid.Row="1" Text="Release file" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <TextBox Text="{Binding AssetPattern, UpdateSourceTrigger=PropertyChanged}" Width="240"
+                                                 ToolTip="Which file of the release to upload, with * and ?, e.g. MegaST-v*.zip. Empty takes the first file the Filehost accepts."/>
+                                        <CheckBox Content="Include pre-releases" IsChecked="{Binding IncludePrereleases}" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,8">
+                                    <Button Content="Choose file…" Command="{Binding BrowseFileCommand}" Margin="0,0,10,0"/>
+                                    <TextBlock Text="{Binding UploadInfo}" Style="{StaticResource Muted}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Visibility="{Binding IsNewFile, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}">
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="90"/><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="Version" Style="{StaticResource Label}" Margin="0,0,8,0"/>
+                                        <TextBox Grid.Column="1" Text="{Binding VersionNumber, UpdateSourceTrigger=PropertyChanged}" ToolTip="1 to 9999.9, one decimal place"/>
+                                        <TextBlock Grid.Column="2" Text="Comment" Style="{StaticResource Label}" Margin="14,0,8,0"/>
+                                        <TextBox Grid.Column="3" Text="{Binding VersionComment, UpdateSourceTrigger=PropertyChanged}" MaxLength="1000" ToolTip="Optional version comment"/>
+                                    </Grid>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <RadioButton Content="Create new version" IsChecked="{Binding ReplaceLatest, Converter={StaticResource Not}}" Margin="0,0,16,0" GroupName="VersionMode"/>
+                                        <RadioButton Content="Replace latest version" IsChecked="{Binding ReplaceLatest}" GroupName="VersionMode"
+                                                     ToolTip="Deletes the latest uploaded version"/>
+                                    </StackPanel>
+                                    <Button Content="Upload version" Command="{Binding UploadVersionCommand}" Style="{DynamicResource AccentButtonStyle}" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                                <Button Content="Upload new file" Command="{Binding UploadNewFileCommand}" Style="{DynamicResource AccentButtonStyle}" HorizontalAlignment="Left"
+                                        Visibility="{Binding IsNewFile, Converter={StaticResource BoolToVisible}}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Attributes -->
+                        <Border Style="{StaticResource Card}" Visibility="{Binding ShowAttributes, Converter={StaticResource BoolToVisible}}">
+                            <StackPanel>
+                                <TextBlock Text="File attributes" Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="This file is locked by the Filehost admins and is not visible in public." Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                           Visibility="{Binding IsLocked, Converter={StaticResource BoolToVisible}}" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                                    <TextBlock Text="Title" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                    <TextBox Grid.Column="1" Text="{Binding FileTitle, UpdateSourceTrigger=PropertyChanged}" MaxLength="200" Margin="0,0,0,6" ToolTip="Display name, can differ from the file name"/>
+                                    <TextBlock Grid.Row="1" Text="Type" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                    <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding FileTypes}" SelectedItem="{Binding SelectedType}" DisplayMemberPath="Label" Margin="0,0,0,6"/>
+                                    <TextBlock Grid.Row="2" Text="Description" Style="{StaticResource Label}" Margin="0,4,10,6" VerticalAlignment="Top"/>
+                                    <Grid Grid.Row="2" Grid.Column="1" Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition Width="10"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                        <!-- The website's only formatting codes, so #bs# and #be# do not look like a fault -->
+                                        <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="8,6" VerticalAlignment="Top">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                                                <TextBlock Grid.ColumnSpan="2" Text="Formatting on the website" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                                                <TextBlock Grid.Row="1" Text="You type" Style="{StaticResource Muted}" FontSize="11.5" Margin="0,0,10,2"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="Website shows" Style="{StaticResource Muted}" FontSize="11.5" Margin="0,0,0,2"/>
+                                                <TextBlock Grid.Row="2" Text="#bs#text#be#" FontFamily="Cascadia Mono, Consolas" FontSize="11.5" Margin="0,0,10,3"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="text (bold)" FontWeight="Bold" FontSize="11.5" Margin="0,0,0,3"/>
+                                                <TextBlock Grid.Row="3" Text="new line" FontFamily="Cascadia Mono, Consolas" FontSize="11.5" Margin="0,0,10,3"/>
+                                                <TextBlock Grid.Row="3" Grid.Column="1" Text="new line" FontSize="11.5" Margin="0,0,0,3"/>
+                                                <TextBlock Grid.Row="4" Text="https://…" FontFamily="Cascadia Mono, Consolas" FontSize="11.5" Margin="0,0,10,0"/>
+                                                <TextBlock Grid.Row="4" Grid.Column="1" Text="a link" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" FontSize="11.5"/>
+                                            </Grid>
+                                        </Border>
+                                        <TextBlock Grid.Row="1" Style="{StaticResource Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="0,6,0,0"
+                                                   Text="Nothing else is formatted: Markdown such as **, # or tables shows as typed."/>
+                                        <TextBox Grid.Column="2" Grid.RowSpan="2" Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" MaxLength="65000" AcceptsReturn="True" TextWrapping="Wrap"
+                                                 MinHeight="160" MaxHeight="320" VerticalScrollBarVisibility="Auto"
+                                                 ToolTip="What users see. Put #bs# and #be# around bold text."/>
+                                    </Grid>
+                                    <Expander Grid.Row="3" Grid.Column="1" Header="Website Preview" IsExpanded="True" Margin="0,0,0,8"
+                                              ToolTip="The description as files.mega65.org will show it">
+                                        <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="10,8" Margin="0,4,0,0">
+                                            <ScrollViewer MaxHeight="320" VerticalScrollBarVisibility="Auto">
+                                                <TextBlock v:FilehostText.Text="{Binding Description}" TextWrapping="Wrap" FontSize="12.5"/>
+                                            </ScrollViewer>
+                                        </Border>
+                                    </Expander>
+                                    <TextBlock Grid.Row="4" Text="Search tags" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                    <StackPanel Grid.Row="4" Grid.Column="1" Margin="0,0,0,6">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="Suggest from GitHub" Command="{Binding SuggestTagsCommand}" Margin="6,0,0,0"
+                                                    ToolTip="Suggests tags from the GitHub repository: its topics, name, description and release notes"/>
+                                            <TextBox Text="{Binding SearchTags, UpdateSourceTrigger=PropertyChanged}" MaxLength="200"
+                                                     ToolTip="Optional: tags of at least 3 characters, separated by commas. Title, file name, type, platform and author are already searched."/>
+                                        </DockPanel>
+                                        <WrapPanel Margin="0,6,0,0" Visibility="{Binding HasSuggestions, Converter={StaticResource BoolToVisible}}">
+                                            <TextBlock Text="Suggested:" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,6,4"/>
+                                            <ItemsControl ItemsSource="{Binding SuggestedTags}">
+                                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Command="{Binding DataContext.AddTagCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                                                Padding="8,2" Margin="0,0,4,4" FontSize="12" ToolTip="Add this tag">
+                                                            <TextBlock><Run Text="+ "/><Run Text="{Binding Mode=OneWay}"/></TextBlock>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <Button Content="Add all" Command="{Binding AddAllTagsCommand}" Padding="8,2" Margin="4,0,0,4" FontSize="12"/>
+                                        </WrapPanel>
+                                    </StackPanel>
+                                    <TextBlock Grid.Row="5" Text="Short link" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                    <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding ShortLink, UpdateSourceTrigger=PropertyChanged}" MaxLength="20" Margin="0,0,0,6" Width="220" HorizontalAlignment="Left"
+                                             ToolTip="Optional: letters, digits and '-', 1 to 20 characters"/>
+                                    <TextBlock Grid.Row="6" Text="Video mode" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                    <WrapPanel Grid.Row="6" Grid.Column="1" Margin="0,0,0,6">
+                                        <CheckBox Content="PAL" IsChecked="{Binding Pal}" Margin="0,0,14,0"/>
+                                        <CheckBox Content="NTSC" IsChecked="{Binding Ntsc}"/>
+                                    </WrapPanel>
+                                    <TextBlock Grid.Row="7" Text="Platform" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                    <WrapPanel Grid.Row="7" Grid.Column="1" Margin="0,0,0,6">
+                                        <CheckBox Content="MEGA65" IsChecked="{Binding OsMega65}" Margin="0,0,14,4"/>
+                                        <CheckBox Content="C65" IsChecked="{Binding OsC65}" Margin="0,0,14,4"/>
+                                        <CheckBox Content="C64" IsChecked="{Binding OsC64}" Margin="0,0,14,4"/>
+                                        <CheckBox Content="Vixen" IsChecked="{Binding OsVixen}" Margin="0,0,14,4"/>
+                                        <CheckBox Content="Windows" IsChecked="{Binding OsWindows}" Margin="0,0,14,4"/>
+                                        <CheckBox Content="macOS" IsChecked="{Binding OsMac}" Margin="0,0,14,4"/>
+                                        <CheckBox Content="Linux" IsChecked="{Binding OsLinux}" Margin="0,0,14,4"/>
+                                        <CheckBox Content="Online" IsChecked="{Binding OsOnline}" Margin="0,0,14,4"/>
+                                    </WrapPanel>
+                                    <TextBlock Grid.Row="8" Text="Access" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                    <ComboBox Grid.Row="8" Grid.Column="1" ItemsSource="{Binding AccessOptions}" SelectedItem="{Binding Access}" Width="220" HorizontalAlignment="Left" Margin="0,0,0,6">
+                                        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" ToolTip="{Binding Hint}"/></DataTemplate></ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <TextBlock Grid.Row="9" Text="Core version" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                    <ComboBox Grid.Row="9" Grid.Column="1" ItemsSource="{Binding CoreVersions}" SelectedItem="{Binding CoreVersion}" DisplayMemberPath="VersionText" Margin="0,0,0,6"
+                                              ToolTip="Optional: the core this file was made for or needs"/>
+                                    <TextBlock Grid.Row="10" Text="ROM version" Style="{StaticResource Label}" Margin="0,0,10,6" Visibility="{Binding ShowRomVersion, Converter={StaticResource BoolToVisible}}"/>
+                                    <ComboBox Grid.Row="10" Grid.Column="1" ItemsSource="{Binding RomVersions}" SelectedItem="{Binding RomVersion}" DisplayMemberPath="Label" Margin="0,0,0,6"
+                                              Visibility="{Binding ShowRomVersion, Converter={StaticResource BoolToVisible}}"/>
+                                    <StackPanel Grid.Row="11" Grid.ColumnSpan="2" Margin="0,4,0,0">
+                                        <CheckBox Content="Permission for Intro Disk" IsChecked="{Binding IntroDisk}" Margin="0,0,0,4"
+                                                  ToolTip="Allow the MEGA65 team to include this file, unmodified, on community disks, which anyone may redistribute"/>
+                                        <CheckBox Content="Highscore submission" IsChecked="{Binding HighScore}" Margin="0,0,0,4"
+                                                  Visibility="{Binding IsGame, Converter={StaticResource BoolToVisible}}"
+                                                  ToolTip="Shows a Top Ten list on the file page. You accept or reject scores in Messages on the website."/>
+                                    </StackPanel>
+                                </Grid>
+                                <WrapPanel Margin="0,8,0,0">
+                                    <Button Content="Save details" Command="{Binding SaveDetailsCommand}" Style="{DynamicResource AccentButtonStyle}" Margin="0,0,6,0"
+                                            Visibility="{Binding IsEditDetails, Converter={StaticResource BoolToVisible}}"/>
+                                    <Button Content="Open on website" Command="{Binding OpenOnWebsiteCommand}"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Previews -->
+                        <Border Style="{StaticResource Card}" Visibility="{Binding ShowFileInfo, Converter={StaticResource BoolToVisible}}">
+                            <StackPanel>
+                                <TextBlock Text="Previews" Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="{Binding PreviewInfo}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                <ItemsControl ItemsSource="{Binding Previews}">
+                                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,0,10,10" Width="150">
+                                                <Button Command="{Binding DataContext.OpenPreviewCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                                        Padding="0" Height="100" ToolTip="Open the full preview">
+                                                    <Grid>
+                                                        <TextBlock Text="{Binding Kind}" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource Muted}"/>
+                                                        <Image Source="{Binding ThumbnailUri}" Stretch="Uniform"/>
+                                                    </Grid>
+                                                </Button>
+                                                <Button Content="Delete" Command="{Binding DataContext.DeletePreviewCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                                        HorizontalAlignment="Stretch" Margin="0,4,0,0" FontSize="12" Padding="4,2"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <DockPanel IsEnabled="{Binding CanAddPreview}">
+                                    <Button DockPanel.Dock="Left" Content="Add pictures…" Command="{Binding AddPreviewsCommand}" Margin="0,0,12,0"
+                                            ToolTip="Upload screenshots, a video or audio as previews (several at once)"/>
+                                    <Button DockPanel.Dock="Right" Content="Add link" Command="{Binding AddVideoLinkCommand}" Margin="6,0,0,0"/>
+                                    <TextBox Text="{Binding VideoLink, UpdateSourceTrigger=PropertyChanged}" MaxLength="200" ToolTip="Or paste a link to a video, for example on YouTube"/>
+                                </DockPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- GitHub -->
+                        <Border Style="{StaticResource Card}" Visibility="{Binding ShowFileInfo, Converter={StaticResource BoolToVisible}}">
+                            <StackPanel>
+                                <TextBlock Text="GitHub link" Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,6"
+                                           Text="Once linked, Sync uploads each new GitHub release of this project as a new version of this file."/>
+                                <Grid Visibility="{Binding IsEditDetails, Converter={StaticResource BoolToVisible}}">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                                    <TextBlock Text="Repository" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                    <TextBox Grid.Column="1" Text="{Binding GitHubRepo, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6" ToolTip="https://github.com/owner/repo or owner/repo"/>
+                                    <TextBlock Grid.Row="1" Text="Release file" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding AssetPattern, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6" Width="260" HorizontalAlignment="Left"
+                                             ToolTip="Which file of the release to upload, with * and ?, e.g. MegaST-v*.zip"/>
+                                    <CheckBox Grid.Row="2" Grid.Column="1" Content="Include pre-releases" IsChecked="{Binding IncludePrereleases}" Margin="0,0,0,6"/>
+                                </Grid>
+                                <TextBlock Text="{Binding LinkInfo}" Style="{StaticResource Muted}" Margin="0,0,0,6"/>
+                                <WrapPanel>
+                                    <Button Content="Save link" Command="{Binding SaveLinkCommand}" Margin="0,0,6,6"/>
+                                    <Button Content="Sync from GitHub" Command="{Binding SyncSelectedCommand}" Style="{DynamicResource AccentButtonStyle}" Margin="0,0,6,6"
+                                            ToolTip="Upload the newest release as a new version, if it is not on the Filehost yet"/>
+                                    <Button Content="Remove link" Command="{Binding RemoveLinkCommand}" Margin="0,0,6,6"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Versions -->
+                        <Border Style="{StaticResource Card}" Padding="2" Visibility="{Binding ShowFileInfo, Converter={StaticResource BoolToVisible}}">
+                            <ListView ItemsSource="{Binding Versions}" ItemContainerStyle="{StaticResource CompactRow}" BorderThickness="0" Background="Transparent" MaxHeight="260">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Version" Width="70" DisplayMemberBinding="{Binding Version}"/>
+                                        <GridViewColumn Header="File" Width="220" DisplayMemberBinding="{Binding FileName}"/>
+                                        <GridViewColumn Header="Size" Width="90" DisplayMemberBinding="{Binding SizeBytes, StringFormat={}{0:N0}}"/>
+                                        <GridViewColumn Header="Uploaded" Width="100" DisplayMemberBinding="{Binding Uploaded}"/>
+                                        <GridViewColumn Header="Active" Width="60" DisplayMemberBinding="{Binding Active}"/>
+                                        <GridViewColumn Header="Comment" Width="260" DisplayMemberBinding="{Binding Comment}"/>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
             </Grid>
         </DockPanel>
     </DataTemplate>
@@ -681,7 +1022,8 @@
     <DataTemplate DataType="{x:Type vm:AboutViewModel}">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel MaxWidth="720" HorizontalAlignment="Left">
-                <TextBlock Text="About MEGA65 GUI" Style="{StaticResource PageTitle}"/>
+                <Image Source="/Assets/logo.png" Height="110" HorizontalAlignment="Left" Margin="0,0,0,12" RenderOptions.BitmapScalingMode="HighQuality"/>
+                <TextBlock Text="About" Style="{StaticResource PageTitle}"/>
                 <TextBlock Style="{StaticResource PageSubtitle}">
                     <Run Text="Version"/> <Run Text="{Binding Version, Mode=OneWay}"/>
                 </TextBlock>

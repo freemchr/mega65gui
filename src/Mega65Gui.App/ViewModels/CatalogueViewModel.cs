@@ -22,7 +22,7 @@ public sealed partial class CatalogueViewModel : PageViewModel
     private readonly AppServices services;
     private bool _loaded;
 
-    public CatalogueViewModel(AppServices services) : base("Filehost", "\uE774")
+    public CatalogueViewModel(AppServices services) : base("MEGA65 File Host", "\uE774")
     {
         this.services = services;
         services.Session.Changed += () => System.Windows.Application.Current.Dispatcher.Invoke(() =>

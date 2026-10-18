@@ -1,7 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-<polygon fill="#E4002B" points="2,240 36,240 118,16 84,16"/>
-<polygon fill="#FF8200" points="36,240 70,240 152,16 118,16"/>
-<polygon fill="#FFCD00" points="70,240 104,240 186,16 152,16"/>
-<polygon fill="#00A651" points="104,240 138,240 220,16 186,16"/>
-<polygon fill="#0072CE" points="138,240 172,240 254,16 220,16"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- MEGA65 GUI icon: the badge's four stripes on its black background -->
+  <rect x="0" y="0" width="256" height="256" rx="56" fill="#0c0c0c"/>
+  <polygon points="89,76 220,76 207,101 76,101" fill="#1e64ff"/>
+  <polygon points="72,104 209,104 196,129 59,129" fill="#00dc3c"/>
+  <polygon points="55,132 198,132 185,157 42,157" fill="#fff000"/>
+  <polygon points="38,160 187,160 174,180 30,180" fill="#ff5000"/>
 </svg>

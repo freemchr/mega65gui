@@ -38,9 +38,10 @@ Notation: **verified** means a live response was observed; *inferred* means it w
 | `readarticledetail.php` | Articles |
 | `readcontent.php` | Terms and privacy pages |
 
-### Write and auth endpoints (never called)
+### Write and auth endpoints
 
-`login.php`, `logout.php`, `request.php`, `redeem.php`, `saveupdatedownload.php`, `savecomment.php`, `savescore*.php`, `savemediaupload.php`, `saveupdateview.php`.
+- **Used:** `login.php` and `logout.php` (see Sign-in), plus `savefileupload.php` and `savefileupdate.php` on the MEGA65 File Host Upload page (see My File Uploads below).
+- **Never called:** `request.php`, `redeem.php`, `saveupdatedownload.php`, `savecomment.php`, `savescore*.php`, `savemediaupload.php`, `savemedialink.php`, `savedeletemedia.php`, `savedeletefileversion.php`, `saveupdateversion.php`, `saveupdateview.php`.
 
 ### Downloads (verified)
 
@@ -111,6 +112,32 @@ The release packages themselves are discovered dynamically. Only the two tools f
 - **Verified:** sign-in works with a real account (2026-10-16).
 - **Verified (R6 0.97.2):** the with-ROM package has the same layout as the no-ROM one plus `sdcard-files/MEGA65.ROM` (128 KB). Its top folder is `mega65r6-release-0.97.2-03b24c6`, with no `-norom` suffix. The app checks that `MEGA65.ROM` is really present before reporting a with-ROM update.
 - **Still to confirm:** the API `filename` of the with-ROM version. The parser treats anything other than `-norom` as including the ROM. The parser accepts `…-<hash>.7z` or any suffix other than `-norom`.
+
+## My File Uploads (owner-only writes)
+
+Read 2026-10-18 from the website's upload page (`html/fileupload.php`). The read endpoints were checked live with a real account; **the two write endpoints have not yet been called against the live site.**
+
+| Endpoint | Method and params | Answer |
+|---|---|---|
+| `readfilelist.php` | GET | `[{id, title}]`: your own uploads (verified) |
+| `readfile.php` | POST `fileid` | `{"0": {id, title, description, searchtags, shortlink, filetypeid, ntsc, pal, osmega65, osc65, osc64, osvixen, oswindows, osmac, oslinux, osonline, introdisk, highscore, groupname, coreversionid, romversionid, locked}, "state": "OK"}` (verified) |
+| `readversionlist.php` | POST `fileid` | `[{version, versionid, filename, size, comment, uploaded, active, checked, location}]`, inactive versions included (verified) |
+| `readfiletypes.php` | GET | `[{id, name, extension, filecategory}]`, e.g. 58 = Core (verified) |
+| `readcoreversionsupload.php` | POST | `[{core, versionid, versiontext}]` (verified) |
+| `readromversions.php` | POST | `[{state, versionid, versiontext}]` (verified) |
+| `savefileupload.php` | POST multipart: file in field `fileupload`, plus the fields below | `{state: "OK", message, fileid}`, or `EXIST`/`ERROR` with a message |
+| `savefileupdate.php` | POST form: `fileid` plus the attribute fields | `{state: "OK", message}` |
+
+- **Attribute fields:** `title`, `type` (file type id), `description`, `searchtags`, `shortlink`, `ntsc`, `pal`, `osmega65`, `osc65`, `osc64`, `osvixen`, `oswindows`, `osmac`, `oslinux`, `osonline`, `introdisk`, `highscore`, `grouppublic`, `groupmega65`, `groupadmin`, `groupowner`, `coreversionid`, `romversionid`. Flags are `Y`/`N`; exactly one group is `Y`. The DevKit button posts as `groupmega65`; `readfile` reports it as `groupname: "devkit"`.
+- **Escaping, as the page does it:** backslashes are doubled in title, description, search tags and comment; `&`, `<` and `>` are HTML-escaped in title and search tags. `readfile` returns the title HTML-escaped, so it is unescaped before editing.
+- **Upload-only fields:** `fileid` (`-1` for a new file), `comment`, `version` (1 to 9999.9, one decimal), `mode` (`init` for a new file, `new` to add a version, `replace` to delete the latest version and put the upload in its place). A new version becomes the active one.
+- **The upload sends all attributes too,** so MEGA65 GUI reads them with `readfile` first and sends them back, so an upload never resets them.
+- **Rules copied from the page:** at most 200 MB; extensions doc, docx, xls, xlsx, txt, zip, rar, tar, 7z, dmg, pdf, iso, m65, d81, d64, prg, asm, bas, lst, c65, cor, rom, bin, mcs, bit, hic, sid, mod, osx, exe, rdf, bdf, cfg, tcr, chr or none; a title, a type and at least one platform are required; a short link is letters, digits and `-`. Highscore is offered only for Game types, and a ROM version only for MEGA65 cores.
+- **Not done in the app:** previews (`savemediaupload.php`), deleting files or versions, and choosing the active version. Use the website for those.
+
+### GitHub releases
+
+A file on the MEGA65 File Host Upload page can be linked to a GitHub repository (stored in `upload-links.json`). Sync reads the newest non-draft release from the public GitHub API, picks the release file by a pattern such as `MegaST-*.zip`, and uploads it as a new version unless that tag or that file name is already on the Filehost. The version comes from the tag (`v1.2` becomes 1.2); tags that do not fit nnnn.n get the next free version. The app asks before every upload, also when the check runs at start-up.
 
 ## Open questions
 

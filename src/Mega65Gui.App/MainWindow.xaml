@@ -9,20 +9,8 @@
                 BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
             <DockPanel Margin="10,0">
                 <!-- Brand -->
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,18,0,18">
-                    <Canvas Width="26" Height="20" Margin="0,0,10,0" VerticalAlignment="Center" ClipToBounds="True">
-                        <Canvas.RenderTransform><SkewTransform AngleX="-20"/></Canvas.RenderTransform>
-                        <Rectangle Canvas.Left="6"  Width="4" Height="20" Fill="{StaticResource M65Red}"/>
-                        <Rectangle Canvas.Left="10" Width="4" Height="20" Fill="{StaticResource M65Orange}"/>
-                        <Rectangle Canvas.Left="14" Width="4" Height="20" Fill="{StaticResource M65Yellow}"/>
-                        <Rectangle Canvas.Left="18" Width="4" Height="20" Fill="{StaticResource M65Green}"/>
-                        <Rectangle Canvas.Left="22" Width="4" Height="20" Fill="{StaticResource M65Blue}"/>
-                    </Canvas>
-                    <StackPanel>
-                        <TextBlock Text="MEGA65 GUI" FontSize="17" FontWeight="Bold" LineHeight="18"/>
-                        <TextBlock Text="MEGA65 Manager" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                    </StackPanel>
-                </StackPanel>
+                <Image DockPanel.Dock="Top" Source="/Assets/logo.png" Margin="4,16,4,14" Height="62" HorizontalAlignment="Left"
+                       RenderOptions.BitmapScalingMode="HighQuality" ToolTip="MEGA65 GUI"/>
 
                 <!-- Footer: device, tools, account (always visible) -->
                 <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,12" DataContext="{Binding Shell}">

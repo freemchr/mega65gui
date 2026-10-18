@@ -26,6 +26,12 @@ public sealed class AppServices
         anonymousHttp.DefaultRequestHeaders.UserAgent.ParseAdd("Mega65Gui/0.1 (+https://github.com/freemchr/mega65gui)");
         Catalogue = new CatalogueService(Filehost, Paths, session: Session, anonymousClient: new FilehostClient(anonymousHttp));
         Downloads = new DownloadManager(Http, Paths);
+        Uploads = new FilehostUploads(Http, Session);
+        GitHubHttp = new HttpClient(new HttpClientHandler { UseCookies = false }) { Timeout = TimeSpan.FromMinutes(10) };
+        GitHubHttp.DefaultRequestHeaders.UserAgent.ParseAdd("Mega65Gui/0.1 (+https://github.com/freemchr/mega65gui)");
+        GitHub = new GitHubReleases(GitHubHttp);
+        UploadLinks = new UploadLinkStore(Path.Combine(Paths.Root, "upload-links.json"));
+        UploadLinks.Load();
         Runner = new ProcessRunner();
         Tools = new ToolManager(Paths, Runner);
         Tools.Load();
@@ -36,6 +42,11 @@ public sealed class AppServices
     public HttpClient Http { get; }
     public FilehostClient Filehost { get; }
     public FilehostSession Session { get; }
+    public FilehostUploads Uploads { get; }
+    /// <summary>Without the Filehost cookies, for GitHub's API and release downloads.</summary>
+    public HttpClient GitHubHttp { get; }
+    public GitHubReleases GitHub { get; }
+    public UploadLinkStore UploadLinks { get; }
     public CredentialStore Credentials { get; }
     public CatalogueService Catalogue { get; }
     public DownloadManager Downloads { get; }

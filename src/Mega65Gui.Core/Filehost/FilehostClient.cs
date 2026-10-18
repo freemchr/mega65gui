@@ -46,6 +46,15 @@ public sealed class FilehostClient(HttpClient http)
         return req;
     }
 
+    /// <summary>GET with the same headers, as the upload page's Kendo lists fetch them.</summary>
+    internal static HttpRequestMessage AjaxGet(string script)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Get, new Uri(PhpBase, script));
+        req.Headers.Add("X-Requested-With", "XMLHttpRequest");
+        req.Headers.Referrer = new Uri(BaseUri, "html/main.php");
+        return req;
+    }
+
     private async Task<string> PostAsync(string script, KeyValuePair<string, string>[] form, CancellationToken ct)
     {
         using var req = AjaxPost(script, form);

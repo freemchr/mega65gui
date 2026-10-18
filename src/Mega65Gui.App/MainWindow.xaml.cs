@@ -13,6 +13,7 @@ public partial class MainWindow : Window
             if (DataContext is not MainViewModel vm) return;
             await vm.Selected.OnShownAsync();
             await vm.Shell.TryAutoSignInAsync();
+            await vm.MyUploads.StartupCheckAsync();
         };
     }
 }

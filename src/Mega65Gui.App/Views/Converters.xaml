@@ -14,6 +14,14 @@
     <SolidColorBrush x:Key="M65Green" Color="#00A651"/>
     <SolidColorBrush x:Key="M65Blue" Color="#0072CE"/>
 
+    <!-- Column headers: a visible edge shows where to drag to resize a column -->
+    <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource {x:Type GridViewColumnHeader}}">
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,1,0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="ToolTip" Value="Drag the edge to resize the column"/>
+    </Style>
+
     <!-- Compact GridView rows (the Fluent template adds generous padding) -->
     <Style x:Key="CompactRow" TargetType="ListViewItem">
         <Setter Property="Padding" Value="0,4"/>

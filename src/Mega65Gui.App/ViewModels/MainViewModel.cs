@@ -9,6 +9,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Update = new UpdateViewModel(services, new WpfApprovalGate());
         Catalogue = new CatalogueViewModel(services);
+        MyUploads = new MyUploadsViewModel(services, new WpfApprovalGate());
         Device = new DeviceViewModel(services);
         CardBrowser = new CardBrowserViewModel(services);
         DiskRomTools = new ToolsPageViewModel(services);
@@ -17,7 +18,7 @@ public sealed partial class MainViewModel : ObservableObject
         SdSync = new SdSyncViewModel(services);
         Tools = new ToolsViewModel(services);
         Features = new FeaturesViewModel();
-        Pages = [Update, Catalogue, Device, CardBrowser, Terminal, SdSync, DiskRomTools, Tools, Features, About];
+        Pages = [Update, Catalogue, MyUploads, Device, CardBrowser, Terminal, SdSync, DiskRomTools, Tools, Features, About];
         Shell = new ShellStatusViewModel(services)
         {
             Navigate = title => Selected = Pages.First(p => p.Title == title),
@@ -29,6 +30,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public UpdateViewModel Update { get; }
     public CatalogueViewModel Catalogue { get; }
+    public MyUploadsViewModel MyUploads { get; }
     public DeviceViewModel Device { get; }
     public CardBrowserViewModel CardBrowser { get; }
     public ToolsPageViewModel DiskRomTools { get; }

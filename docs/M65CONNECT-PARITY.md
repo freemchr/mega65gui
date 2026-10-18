@@ -39,6 +39,9 @@ The in-app **Features** page shows the same list from `src/Mega65Gui.Core/Featur
 | Filehost | Download with resume, size and SHA-256 manifest | – | `mega65_ftp fhget` (to device) | Implemented |
 | Filehost | Sign in with your own Filehost account | – | – | Implemented (verified with a real account) |
 | Filehost | Owner-restricted (closed ROM) downloads | – | – | Implemented (via your sign-in; verified with a real account) |
+| Filehost | Upload a new file or a new version of your own files | – | – | Implemented, not yet tried on the live site |
+| Filehost | Edit the attributes of your own files | – | – | Implemented, not yet tried on the live site |
+| Filehost | Upload new GitHub releases as Filehost versions | – | – | Implemented, not yet tried on the live site |
 | Update | Update My MEGA65 (12-step guided workflow) | – | – | Implemented |
 | Update | Update the SD card inside the MEGA65 (USB/JTAG or Ethernet) | Manual, via SD Card Manager | `mega65_ftp` get/put | Implemented (verified over USB/JTAG on an R6; Ethernet unverified) |
 | Update | Core flashing from the PC | – | `mega65_ftp flash`: R2/R3 + Vivado only; refuses R4–R6 and Ethernet | Not offered: guided MEGAFLASH |
