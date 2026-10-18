@@ -685,6 +685,31 @@ public sealed partial class MyUploadsViewModel : PageViewModel
     [RelayCommand]
     private Task SyncAllAsync() => SyncAsync(services.UploadLinks.Links.ToList());
 
+    public bool HasGitHubToken => !string.IsNullOrWhiteSpace(services.GitHub.Token);
+    public string GitHubTokenInfo => HasGitHubToken
+        ? "A GitHub token is saved (encrypted for your Windows account): 5,000 GitHub look-ups an hour."
+        : "No GitHub token: GitHub allows 60 look-ups an hour. Answers are cached, so repeated look-ups are free.";
+
+    /// <summary>Opens the GitHub token window (steps to create one, the current allowance, save or remove).</summary>
+    [RelayCommand]
+    private void SetGitHubToken()
+    {
+        if (!Views.GitHubTokenWindow.Show(services)) return;
+        OnPropertyChanged(nameof(HasGitHubToken));
+        OnPropertyChanged(nameof(GitHubTokenInfo));
+        Status = HasGitHubToken ? "GitHub token saved." : "GitHub token removed.";
+    }
+
+    [RelayCommand]
+    private void RemoveGitHubToken()
+    {
+        services.GitHubToken.Forget();
+        services.GitHub.Token = null;
+        OnPropertyChanged(nameof(HasGitHubToken));
+        OnPropertyChanged(nameof(GitHubTokenInfo));
+        Status = "GitHub token removed.";
+    }
+
     /// <summary>Called once at startup, after the automatic sign-in.</summary>
     public Task StartupCheckAsync() =>
         services.UploadLinks.CheckAtStartup && services.Session.IsSignedIn && services.UploadLinks.Links.Count > 0

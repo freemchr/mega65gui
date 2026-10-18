@@ -373,6 +373,12 @@
                                         <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Text="For every file linked to GitHub, uploads the newest release as a new version if it is not on the Filehost yet. You are asked first."/>
                                         <CheckBox Content="Check GitHub when MEGA65 GUI starts" IsChecked="{Binding CheckAtStartup}" Margin="0,6,0,0"
                                                   ToolTip="Needs a remembered password. You are still asked before anything is uploaded."/>
+                                        <TextBlock Text="{Binding GitHubTokenInfo}" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                            <Button Content="GitHub token…" Command="{Binding SetGitHubTokenCommand}" Margin="0,0,6,0"/>
+                                            <Button Content="Remove token" Command="{Binding RemoveGitHubTokenCommand}"
+                                                    Visibility="{Binding HasGitHubToken, Converter={StaticResource BoolToVisible}}"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </DockPanel>
                             </Border>
@@ -397,6 +403,7 @@
                                         <TextBox Text="{Binding AssetPattern, UpdateSourceTrigger=PropertyChanged}" Width="240"
                                                  ToolTip="Which file of the release to upload, with * and ?, e.g. MegaST-v*.zip. Empty takes the first file the Filehost accepts."/>
                                         <CheckBox Content="Include pre-releases" IsChecked="{Binding IncludePrereleases}" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                        <Button Content="GitHub token…" Command="{Binding SetGitHubTokenCommand}" Margin="12,0,0,0" ToolTip="{Binding GitHubTokenInfo}"/>
                                     </StackPanel>
                                 </Grid>
                                 <StackPanel Orientation="Horizontal" Margin="0,4,0,8">

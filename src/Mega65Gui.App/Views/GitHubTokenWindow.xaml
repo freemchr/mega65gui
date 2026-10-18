@@ -1,0 +1,82 @@
+<Window x:Class="Mega65Gui.App.Views.GitHubTokenWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="GitHub token" Width="520" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <Window.Resources>
+        <Style x:Key="StepNumber" TargetType="Border">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
+        <Style x:Key="StepNumberText" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+        </Style>
+        <Style x:Key="StepText" TargetType="TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+    <StackPanel Margin="22,20,22,20">
+        <TextBlock Text="GitHub token" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,6"/>
+        <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,14"
+                   Text="Optional. Fill from GitHub and Sync read release information from GitHub, which allows 60 look-ups an hour without a token and 5,000 with one."/>
+
+        <!-- Current allowance -->
+        <Border CornerRadius="6" Padding="12,10" Margin="0,0,0,16" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+            <DockPanel>
+                <TextBlock x:Name="StatusIcon" DockPanel.Dock="Left" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"
+                           VerticalAlignment="Center" Margin="0,0,10,0" Text="&#xE946;"/>
+                <StackPanel>
+                    <TextBlock x:Name="StatusTitle" FontWeight="SemiBold" Text="Checking GitHub…"/>
+                    <TextBlock x:Name="StatusDetail" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <TextBlock Text="Create a token" FontWeight="SemiBold" Margin="0,0,0,10"/>
+        <Grid Margin="0,0,0,10">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+            <Border Style="{StaticResource StepNumber}"><TextBlock Text="1" Style="{StaticResource StepNumberText}"/></Border>
+            <DockPanel Grid.Column="1" Margin="0,0,0,10">
+                <Button DockPanel.Dock="Right" Click="OpenGitHub" Padding="10,4" Margin="10,0,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE8A7;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="Open GitHub"/>
+                    </StackPanel>
+                </Button>
+                <TextBlock Style="{StaticResource StepText}"><Run Text="Open GitHub's "/><Run FontWeight="SemiBold" Text="new fine-grained token"/><Run Text=" page (sign in to GitHub if asked)."/></TextBlock>
+            </DockPanel>
+            <Border Grid.Row="1" Style="{StaticResource StepNumber}"><TextBlock Text="2" Style="{StaticResource StepNumberText}"/></Border>
+            <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource StepText}" Margin="0,2,0,10"><Run Text="Give it a name, such as "/><Run FontWeight="SemiBold" Text="MEGA65 GUI"/><Run Text=", and choose how long it lasts."/></TextBlock>
+            <Border Grid.Row="2" Style="{StaticResource StepNumber}"><TextBlock Text="3" Style="{StaticResource StepNumberText}"/></Border>
+            <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource StepText}" Margin="0,2,0,10"><Run Text="Under Repository access choose "/><Run FontWeight="SemiBold" Text="Public repositories"/><Run Text=". No permissions are needed."/></TextBlock>
+            <Border Grid.Row="3" Style="{StaticResource StepNumber}"><TextBlock Text="4" Style="{StaticResource StepNumberText}"/></Border>
+            <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource StepText}" Margin="0,2,0,0"><Run Text="Press "/><Run FontWeight="SemiBold" Text="Generate token"/><Run Text=", copy it and paste it below."/></TextBlock>
+        </Grid>
+
+        <TextBlock Text="Token" Margin="0,8,0,4"/>
+        <PasswordBox x:Name="TokenBox" Margin="0,0,0,6" PasswordChanged="TokenChanged"/>
+        <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,12"
+                   Text="Saved encrypted for your Windows account on this PC, and only sent to api.github.com."/>
+        <TextBlock x:Name="Message" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCriticalBrush}" Visibility="Collapsed" Margin="0,0,0,10"/>
+        <ProgressBar x:Name="Busy" IsIndeterminate="True" Height="3" Visibility="Collapsed" Margin="0,0,0,10"/>
+        <DockPanel>
+            <Button x:Name="RemoveButton" DockPanel.Dock="Left" Content="Remove token" Click="Remove" Visibility="Collapsed"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Cancel" IsCancel="True" Margin="0,0,8,0"/>
+                <Button x:Name="SaveButton" Content="Check and save" IsDefault="True" IsEnabled="False" Style="{DynamicResource AccentButtonStyle}" Click="Save"/>
+            </StackPanel>
+        </DockPanel>
+    </StackPanel>
+</Window>

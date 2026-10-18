@@ -376,4 +376,52 @@ public sealed class FilehostUploadsTests : IDisposable
             "Text with <b>bold</b>, a <a href=\"https://mega65.org\">link</a> and Tom &amp; Jerry.<br>Next line\n<!-- hidden -->");
         Assert.Equal("Text with #bs#bold#be#, a link (https://mega65.org) and Tom & Jerry.\nNext line", text);
     }
+
+    private sealed class FakeGitHub : HttpMessageHandler
+    {
+        public int Calls;
+        public bool RateLimited;
+        public string? LastIfNoneMatch;
+        public string? LastAuthorization;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage req, CancellationToken ct)
+        {
+            Calls++;
+            LastIfNoneMatch = req.Headers.TryGetValues("If-None-Match", out var v) ? v.First() : null;
+            LastAuthorization = req.Headers.Authorization?.ToString();
+            if (RateLimited)
+            {
+                var limited = new HttpResponseMessage(HttpStatusCode.Forbidden);
+                limited.Headers.Add("X-RateLimit-Reset", "1792300000");
+                return Task.FromResult(limited);
+            }
+            if (LastIfNoneMatch == "\"v1\"") return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotModified));
+            var ok = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"name":"MegaZXNext","description":"Mega 65 ZX Next Core"}""") };
+            ok.Headers.ETag = new System.Net.Http.Headers.EntityTagHeaderValue("\"v1\"");
+            return Task.FromResult(ok);
+        }
+    }
+
+    [Fact]
+    public async Task CachesGitHubAnswersAndSurvivesTheRateLimit()
+    {
+        var server = new FakeGitHub();
+        var gh = new GitHubReleases(new HttpClient(server), Path.Combine(_root, "gh")) { Token = "github_pat_test" };
+        Assert.Equal("MegaZXNext", (await gh.GetRepositoryAsync("freemchr/MegaZXNext")).Name);
+        Assert.Equal("Bearer github_pat_test", server.LastAuthorization);
+
+        // A second look-up is conditional (free on GitHub) and answered from the cache.
+        Assert.Equal("MegaZXNext", (await gh.GetRepositoryAsync("freemchr/MegaZXNext")).Name);
+        Assert.Equal("\"v1\"", server.LastIfNoneMatch);
+
+        // Rate limited: the cached answer is used.
+        server.RateLimited = true;
+        Assert.Equal("MegaZXNext", (await gh.GetRepositoryAsync("freemchr/MegaZXNext")).Name);
+
+        // Nothing cached and rate limited: the message says when to try again.
+        var fresh = new GitHubReleases(new HttpClient(server));
+        var e = await Assert.ThrowsAsync<FilehostUploadException>(() => fresh.GetRepositoryAsync("freemchr/Other"));
+        Assert.Contains("60 look-ups an hour", e.Message);
+        Assert.Contains("Try again after", e.Message);
+    }
 }

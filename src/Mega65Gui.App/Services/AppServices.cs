@@ -29,7 +29,8 @@ public sealed class AppServices
         Uploads = new FilehostUploads(Http, Session);
         GitHubHttp = new HttpClient(new HttpClientHandler { UseCookies = false }) { Timeout = TimeSpan.FromMinutes(10) };
         GitHubHttp.DefaultRequestHeaders.UserAgent.ParseAdd("Mega65Gui/0.1 (+https://github.com/freemchr/mega65gui)");
-        GitHub = new GitHubReleases(GitHubHttp);
+        GitHubToken = new SecretStore(Path.Combine(Paths.Root, "github-token.json"), "Mega65Gui.GitHub");
+        GitHub = new GitHubReleases(GitHubHttp, Path.Combine(Paths.CatalogueCache, "github")) { Token = GitHubToken.Load() };
         UploadLinks = new UploadLinkStore(Path.Combine(Paths.Root, "upload-links.json"));
         UploadLinks.Load();
         Runner = new ProcessRunner();
@@ -46,6 +47,8 @@ public sealed class AppServices
     /// <summary>Without the Filehost cookies, for GitHub's API and release downloads.</summary>
     public HttpClient GitHubHttp { get; }
     public GitHubReleases GitHub { get; }
+    /// <summary>The optional GitHub token, DPAPI-encrypted like the Filehost password.</summary>
+    public SecretStore GitHubToken { get; }
     public UploadLinkStore UploadLinks { get; }
     public CredentialStore Credentials { get; }
     public CatalogueService Catalogue { get; }

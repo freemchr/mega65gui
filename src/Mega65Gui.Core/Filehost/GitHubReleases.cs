@@ -34,6 +34,9 @@ public sealed record GitHubRepository
     [JsonPropertyName("topics")] public IReadOnlyList<string> Topics { get; init; } = [];
 }
 
+/// <summary>GitHub's hourly allowance of API look-ups.</summary>
+public sealed record GitHubRateLimit(int Limit, int Remaining, DateTimeOffset Reset);
+
 /// <summary>
 /// Links one of your Filehost uploads to a GitHub repository, so its newest release can be
 /// uploaded as a new Filehost version.
@@ -51,9 +54,17 @@ public sealed record UploadLink
     public DateTimeOffset? LastUploadedAt { get; init; }
 }
 
-/// <summary>Reads releases through the public GitHub REST API (no token; 60 requests an hour).</summary>
-public sealed partial class GitHubReleases(HttpClient http)
+/// <summary>
+/// Reads repositories and releases through the public GitHub REST API. Without a token GitHub
+/// allows 60 requests an hour per internet connection, with a token 5,000. Answers are cached
+/// on disk with their ETag: GitHub does not count a conditional request answered "304 not
+/// modified", and when the limit is reached the cached answer is used instead.
+/// </summary>
+public sealed partial class GitHubReleases(HttpClient http, string? cacheFolder = null)
 {
+    /// <summary>An optional personal access token (read-only access to public repositories is enough).</summary>
+    public string? Token { get; set; }
+
     private static readonly Uri Api = new("https://api.github.com/");
 
     [GeneratedRegex(@"^(?:https?://)?(?:www\.)?(?:github\.com/)?(?<owner>[A-Za-z0-9-]+)/(?<repo>[A-Za-z0-9._-]+?)(?:\.git)?(?:/.*)?$")]
@@ -71,28 +82,81 @@ public sealed partial class GitHubReleases(HttpClient http)
 
     public async Task<GitHubRepository> GetRepositoryAsync(string repo, CancellationToken ct = default)
     {
-        using var resp = await SendAsync($"repos/{repo}", repo, ct);
-        return JsonSerializer.Deserialize<GitHubRepository>(await resp.Content.ReadAsStringAsync(ct))
+        return JsonSerializer.Deserialize<GitHubRepository>(await GetJsonAsync($"repos/{repo}", repo, ct))
             ?? throw new FilehostUploadException("GitHub returned an unexpected answer.");
     }
 
-    private async Task<HttpResponseMessage> SendAsync(string path, string repo, CancellationToken ct)
+    private sealed record CachedAnswer(string? ETag, string Json);
+
+    /// <summary>GETs an API path, using and refreshing the disk cache.</summary>
+    private async Task<string> GetJsonAsync(string path, string repo, CancellationToken ct)
     {
+        var cacheFile = cacheFolder is null ? null
+            : Path.Combine(cacheFolder, Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(path)))[..32] + ".json");
+        CachedAnswer? cached = null;
+        try { if (cacheFile is not null && File.Exists(cacheFile)) cached = JsonSerializer.Deserialize<CachedAnswer>(await File.ReadAllTextAsync(cacheFile, ct)); }
+        catch (JsonException) { }
+
         using var req = new HttpRequestMessage(HttpMethod.Get, new Uri(Api, path));
         req.Headers.Accept.ParseAdd("application/vnd.github+json");
         req.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
-        var resp = await http.SendAsync(req, ct);
-        if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) { resp.Dispose(); throw new FilehostUploadException($"GitHub has no repository {repo} (or it is private)."); }
-        if (resp.StatusCode == System.Net.HttpStatusCode.Forbidden) { resp.Dispose(); throw new FilehostUploadException("GitHub's hourly limit for unauthenticated requests was reached. Try again later."); }
+        if (!string.IsNullOrWhiteSpace(Token)) req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Token.Trim());
+        if (cached?.ETag is { } etag) req.Headers.TryAddWithoutValidation("If-None-Match", etag);
+
+        using var resp = await http.SendAsync(req, ct);
+        if (resp.StatusCode == System.Net.HttpStatusCode.NotModified && cached is not null) return cached.Json;
+        if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) throw new FilehostUploadException($"GitHub has no repository {repo} (or it is private).");
+        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized) throw new FilehostUploadException("GitHub refused the token. Check it, or remove it to look up public repositories without one.");
+        if (resp.StatusCode is System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.TooManyRequests)
+        {
+            // Rate limited: the last answer is good enough to work with.
+            if (cached is not null) return cached.Json;
+            throw new FilehostUploadException(RateLimitMessage(resp, !string.IsNullOrWhiteSpace(Token)));
+        }
         resp.EnsureSuccessStatusCode();
-        return resp;
+        var json = await resp.Content.ReadAsStringAsync(ct);
+        if (cacheFile is not null)
+        {
+            Directory.CreateDirectory(cacheFolder!);
+            await File.WriteAllTextAsync(cacheFile, JsonSerializer.Serialize(new CachedAnswer(resp.Headers.ETag?.ToString(), json)), ct);
+        }
+        return json;
+    }
+
+    /// <summary>
+    /// The look-ups left this hour (GitHub's rate_limit endpoint, which itself does not count).
+    /// With <paramref name="token"/> it checks that token instead; a rejected token throws.
+    /// </summary>
+    public async Task<GitHubRateLimit> GetRateLimitAsync(string? token = null, CancellationToken ct = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, new Uri(Api, "rate_limit"));
+        req.Headers.Accept.ParseAdd("application/vnd.github+json");
+        var use = token ?? Token;
+        if (!string.IsNullOrWhiteSpace(use)) req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", use.Trim());
+        using var resp = await http.SendAsync(req, ct);
+        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized) throw new FilehostUploadException("GitHub did not accept this token. Check that it was copied completely and has not expired.");
+        resp.EnsureSuccessStatusCode();
+        var core = System.Text.Json.Nodes.JsonNode.Parse(await resp.Content.ReadAsStringAsync(ct))?["resources"]?["core"]
+            ?? throw new FilehostUploadException("GitHub returned an unexpected answer.");
+        return new((int)core["limit"]!, (int)core["remaining"]!, DateTimeOffset.FromUnixTimeSeconds((long)core["reset"]!));
+    }
+
+    /// <summary>When the limit resets, from GitHub's X-RateLimit-Reset header (Unix seconds).</summary>
+    internal static string RateLimitMessage(HttpResponseMessage resp, bool hasToken)
+    {
+        var when = resp.Headers.TryGetValues("X-RateLimit-Reset", out var v) && long.TryParse(v.FirstOrDefault(), out var unix)
+            ? $" Try again after {DateTimeOffset.FromUnixTimeSeconds(unix).ToLocalTime():HH:mm}."
+            : " Try again within the hour.";
+        return hasToken
+            ? "GitHub's hourly limit for this token was reached." + when
+            : "GitHub allows 60 look-ups an hour without a token, and that limit was reached." + when +
+              " Adding a GitHub token (GitHub token… on this page) raises the limit to 5,000 an hour.";
     }
 
     /// <summary>The newest published release, newest first; pre-releases only when asked for.</summary>
     public async Task<GitHubRelease?> GetLatestAsync(string repo, bool includePrereleases, CancellationToken ct = default)
     {
-        using var resp = await SendAsync($"repos/{repo}/releases?per_page=20", repo, ct);
-        var releases = JsonSerializer.Deserialize<List<GitHubRelease>>(await resp.Content.ReadAsStringAsync(ct)) ?? [];
+        var releases = JsonSerializer.Deserialize<List<GitHubRelease>>(await GetJsonAsync($"repos/{repo}/releases?per_page=20", repo, ct)) ?? [];
         return releases.Where(r => !r.Draft && (includePrereleases || !r.Prerelease))
             .OrderByDescending(r => r.PublishedAt ?? DateTimeOffset.MinValue).FirstOrDefault();
     }
