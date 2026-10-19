@@ -41,8 +41,22 @@ Each item needs a real MEGA65, and its findings go back into `FeatureCatalog`.
 - `coretool` integration (build, verify, extract COR/MCS)
 - R2/R3 PC-side flashing via `mega65_ftp flash` + Vivado, offered only after it is verified on hardware and behind explicit confirmation
 
+## Core Manager (in progress)
+
+- [x] Core library: import `.cor`/`.bit`/packages, SHA-256 duplicates, favourites, categories, tags, notes, artwork, export
+- [x] Compatibility checking from `.cor` headers against the model read from the MEGA65
+- [x] Filehost core discovery, download into the library, update indicator
+- [x] Run now over USB/JTAG (`m65 -q`; `.cor` through its embedded `.bit`) *(verified with Vixen-32 on an R6)*
+- [x] Copy a core's own SD-card files from its package, as laid out *(hardware-unverified)*
+- [x] Start flash slots, with your own slot notes
+- [x] Stage cores on the SD card for MEGAFLASH, with approval, backup and verification *(hardware-unverified)*
+- [ ] Verify on hardware: Run now with a labelled `.bit`; staging and SD-card files to the card inside an R6; MEGAFLASH install from a staged core
+- [ ] Scratch-slot workflow (option (b) in [CORE-LOADING-FEASIBILITY.md](CORE-LOADING-FEASIBILITY.md)), once MEGAFLASH has a non-interactive "flash to slot N and start" entry upstream
+- [ ] `ExternalLoader` backend for the Pico/JTAG expansion board, once its protocol has a tagged release and has been tested on the hardware
+
 ## Out of scope
 
 - Bypassing Filehost login or ownership checks
 - Redistributing closed ROMs, FTDI drivers or Vivado
 - Launching M65Connect as the app's interface
+- Writing FPGA flash from the PC on R4–R6, or touching slot 0 (the factory core)

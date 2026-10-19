@@ -11,6 +11,7 @@ public sealed partial class MainViewModel : ObservableObject
         Catalogue = new CatalogueViewModel(services);
         MyUploads = new MyUploadsViewModel(services, new WpfApprovalGate());
         Device = new DeviceViewModel(services);
+        CoreManager = new CoreManagerViewModel(services, new WpfApprovalGate());
         CardBrowser = new CardBrowserViewModel(services);
         DiskRomTools = new ToolsPageViewModel(services);
         Terminal = new TerminalViewModel(services);
@@ -18,11 +19,12 @@ public sealed partial class MainViewModel : ObservableObject
         SdSync = new SdSyncViewModel(services);
         Tools = new ToolsViewModel(services);
         Features = new FeaturesViewModel();
-        Pages = [Update, Catalogue, MyUploads, Device, CardBrowser, Terminal, SdSync, DiskRomTools, Tools, Features, About];
+        Pages = [Update, Catalogue, MyUploads, Device, CoreManager, CardBrowser, Terminal, SdSync, DiskRomTools, Tools, Features, About];
         Shell = new ShellStatusViewModel(services)
         {
             Navigate = title => Selected = Pages.First(p => p.Title == title),
         };
+        CoreManager.Navigate = Shell.Navigate;
         _selected = Update;
     }
 
@@ -32,6 +34,7 @@ public sealed partial class MainViewModel : ObservableObject
     public CatalogueViewModel Catalogue { get; }
     public MyUploadsViewModel MyUploads { get; }
     public DeviceViewModel Device { get; }
+    public CoreManagerViewModel CoreManager { get; }
     public CardBrowserViewModel CardBrowser { get; }
     public ToolsPageViewModel DiskRomTools { get; }
     public TerminalViewModel Terminal { get; }

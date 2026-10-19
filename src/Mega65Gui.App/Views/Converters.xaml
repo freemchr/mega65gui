@@ -6,6 +6,8 @@
     <v:InverseBoolConverter x:Key="Not"/>
     <v:StatusBrushConverter x:Key="StatusBrush"/>
     <v:EnumLabelConverter x:Key="EnumLabel"/>
+    <v:PathToImageConverter x:Key="PathToImage"/>
+    <v:ToastGlyphConverter x:Key="ToastGlyph"/>
 
     <!-- MEGA65 palette -->
     <SolidColorBrush x:Key="M65Red" Color="#E4002B"/>

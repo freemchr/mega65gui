@@ -802,6 +802,11 @@
         </DockPanel>
     </DataTemplate>
 
+    <!-- ================= Core Manager ================= -->
+    <DataTemplate DataType="{x:Type vm:CoreManagerViewModel}">
+        <v:CoreManagerView/>
+    </DataTemplate>
+
     <!-- ================= SD card browser ================= -->
     <DataTemplate DataType="{x:Type vm:CardBrowserViewModel}">
         <v:CardBrowserView/>

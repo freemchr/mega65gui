@@ -257,7 +257,12 @@ public sealed partial class DeviceViewModel : PageViewModel
 
     private Task LoadBitFileAsync(string path) =>
         Confirm("Load bitstream", $"Load {Path.GetFileName(path)} into the FPGA?\n\nThis replaces the running core until the MEGA65 is switched off. Nothing is written to flash.")
-            ? RunToolAsync((c, t) => c.LoadBitstreamAsync(t, path), $"Loading {Path.GetFileName(path)} into the FPGA…")
+            ? RunToolAsync(async (c, t) =>
+            {
+                var r = await c.LoadBitstreamAsync(t, path);
+                if (r.Succeeded) services.NoteCoreReplaced($"{Path.GetFileName(path)} (loaded over JTAG from this PC until power-off)");
+                return r;
+            }, $"Loading {Path.GetFileName(path)} into the FPGA…")
             : Task.CompletedTask;
 
     [RelayCommand]
@@ -381,6 +386,7 @@ public sealed partial class DeviceViewModel : PageViewModel
     private Task RunToolAsync(Func<Mega65Commands, ConnectionTarget, Task<ProcessResult>> op, string busy, bool echo = true) => GuardAsync(async () =>
     {
         var target = services.Connection ?? throw new InvalidOperationException("Connect to a MEGA65 first.");
+        using var claim = services.DeviceGate.Enter(busy.TrimEnd('…'));
         await services.ReleasePortAsync();
         var r = await op(RequireTools(), target);
         if (echo)

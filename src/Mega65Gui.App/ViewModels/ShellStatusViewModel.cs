@@ -18,8 +18,70 @@ public sealed partial class ShellStatusViewModel : ObservableObject
         _services = services;
         services.Session.Changed += () => Application.Current.Dispatcher.Invoke(Refresh);
         services.ToolsChanged += () => Application.Current.Dispatcher.Invoke(Refresh);
-        services.ConnectionChanged += Refresh;
+        services.ConnectionChanged += () => { Refresh(); AnnounceConnection(); };
         Refresh();
+        _toastTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+        _toastTimer.Tick += (_, _) => { _toastTimer.Stop(); ToastVisible = false; };
+    }
+
+    // ---- Connection notification: a banner at the top of the window when the connection changes ----
+
+    public enum ToastKind { Success, Warning }
+
+    [ObservableProperty] private string _toastText = "";
+    [ObservableProperty] private string _toastDetail = "";
+    [ObservableProperty] private ToastKind _toastLevel;
+    [ObservableProperty] private bool _toastVisible;
+    private readonly System.Windows.Threading.DispatcherTimer _toastTimer;
+    private string? _announced;
+
+    /// <summary>
+    /// Shows a banner when the device connects, stops answering or disconnects. Other changes
+    /// (for example the running core's description) do not repeat it.
+    /// </summary>
+    private void AnnounceConnection()
+    {
+        var c = _services.Connection;
+        var d = _services.Device;
+        var key = c is null ? $"none:{_services.LostPort}" : $"{c}:{d.Model}:{d.NoResponse}";
+        if (key == _announced) return;
+        var first = _announced is null;
+        _announced = key;
+        if (first && c is null) return; // nothing to say at start-up
+
+        if (c is null)
+        {
+            if (_services.LostPort is not { } lost) { ToastVisible = false; return; }
+            Show(ToastKind.Warning, $"Disconnected from {lost}", "The MEGA65 was switched off or its USB cable unplugged. It reconnects automatically when it comes back.");
+        }
+        else if (d.NoResponse)
+            Show(ToastKind.Warning, $"{c.Address} opened, but the MEGA65 is not answering",
+                "Make sure it is switched on and showing its normal screen, then press Connect again.");
+        else if (c.Kind == Core.Device.ConnectionKind.Ethernet)
+            Show(ToastKind.Success, $"Connected over Ethernet ({c.Address})", "Model and core cannot be read over Ethernet.");
+        else
+            Show(ToastKind.Success,
+                d.Model == Core.Device.HardwareModel.Unknown ? $"Connected on {c.Address}" : $"Connected to MEGA65 {d.Model} on {c.Address}",
+                $"Core {d.CoreBuild ?? "not read"} · ROM {d.RomVersion ?? "not read"}");
+    }
+
+    private void Show(ToastKind kind, string text, string detail)
+    {
+        ToastLevel = kind;
+        ToastText = text;
+        ToastDetail = detail;
+        // Toggle so the slide-in animation runs again even if a banner is already showing.
+        ToastVisible = false;
+        ToastVisible = true;
+        _toastTimer.Stop();
+        _toastTimer.Start();
+    }
+
+    [RelayCommand]
+    private void CloseToast()
+    {
+        _toastTimer.Stop();
+        ToastVisible = false;
     }
 
     [ObservableProperty] private bool _isSignedIn;

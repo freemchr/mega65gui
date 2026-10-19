@@ -132,11 +132,11 @@ public sealed class Mega65Commands(ToolInstallation tools, IProcessRunner runner
     public Task<ProcessResult> SendPrgAsync(ConnectionTarget t, string prg, bool run, bool c64, CancellationToken ct = default) => Run(SendPrgArgs(t, prg, run, c64), Long, ct);
     public Task<ProcessResult> ScreenshotAsync(ConnectionTarget t, string png, CancellationToken ct = default) => Run(ScreenshotArgs(t, png), Short, ct);
     public Task<ProcessResult> SendSidAsync(ConnectionTarget t, string sid, CancellationToken ct = default) => Run(SendSidArgs(t, sid), Long, ct);
-    public Task<ProcessResult> LoadBitstreamAsync(ConnectionTarget t, string bit, CancellationToken ct = default) => Run(LoadBitstreamArgs(t, bit), Long, ct);
+    public Task<ProcessResult> LoadBitstreamAsync(ConnectionTarget t, string bit, CancellationToken ct = default, IProgress<string>? output = null) => Run(LoadBitstreamArgs(t, bit), Long, ct, output);
     public Task<ProcessResult> LoadHickupAsync(ConnectionTarget t, string file, CancellationToken ct = default) => Run(LoadHickupArgs(t, file), Long, ct);
     public Task<ProcessResult> LoadRomAsync(ConnectionTarget t, string rom, CancellationToken ct = default) => Run(LoadRomArgs(t, rom), Long, ct);
     public Task<ProcessResult> SetVideoModeAsync(ConnectionTarget t, bool pal, CancellationToken ct = default) => Run(VideoModeArgs(t, pal), Short, ct);
-    public Task<ProcessResult> BootSlotAsync(ConnectionTarget t, int slot, CancellationToken ct = default) => Run(BootSlotArgs(t, slot), Long, ct);
+    public Task<ProcessResult> BootSlotAsync(ConnectionTarget t, int slot, CancellationToken ct = default, IProgress<string>? output = null) => Run(BootSlotArgs(t, slot), Long, ct, output);
 
     public Task<ProcessResult> TypeBasicAsync(ConnectionTarget t, string listing, CancellationToken ct = default)
     {

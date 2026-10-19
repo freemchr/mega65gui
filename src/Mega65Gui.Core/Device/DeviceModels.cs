@@ -60,10 +60,20 @@ public static class HardwareModels
     /// an installed Vivado. R4–R6 must be flashed on the machine with MEGAFLASH.
     /// </summary>
     public static bool SupportsPcFlashing(HardwareModel m) => m is HardwareModel.R2 or HardwareModel.R3;
+
+    /// <summary>
+    /// Number of core slots in the board's flash, or null when not known for certain. Slots are
+    /// 8 MB on R3–R6 (megaflash.scr). The R3 has 4 slots and the R3A 8, but both report model 3.
+    /// </summary>
+    public static int? FlashSlots(HardwareModel m) => m switch
+    {
+        HardwareModel.R4 or HardwareModel.R5 or HardwareModel.R6 => 8,
+        _ => null,
+    };
 }
 
 /// <summary>Where a value came from, so the UI never presents a guess as a fact.</summary>
-public enum Provenance { NotKnown, UserSupplied, ReadFromDevice }
+public enum Provenance { NotKnown, UserSupplied, ReadFromDevice, ReadFromFile }
 
 public sealed record DeviceState(
     ConnectionTarget? Connection,

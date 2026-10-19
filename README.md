@@ -14,7 +14,7 @@ It brings together:
 - a guided **Update My MEGA65** workflow;
 - the working goal of feature parity with [M65Connect](https://github.com/MEGA65/m65connect).
 
-> Status: **in development.** Tested on a real MEGA65 R6 over USB/JTAG: updates (including the closed ROM via your Filehost account), the SD card browser, PRG/SID/ROM/HICKUP loading, PAL/NTSC, screenshots, the terminal and remote keyboard. Ethernet and bitstream loading are not yet verified on hardware. The app's Features page shows each feature's status.
+> Status: **in development.** Tested on a real MEGA65 R6 over USB/JTAG: updates (including the closed ROM via your Filehost account), the SD card browser, PRG/SID/ROM/HICKUP loading, PAL/NTSC, screenshots, the terminal and remote keyboard, and running a core over JTAG from the Core Manager (Vixen-32). Ethernet is not yet verified on hardware. The app's Features page shows each feature's status.
 
 ## Screenshots
 
@@ -24,8 +24,10 @@ It brings together:
 | **Update My MEGA65:** the 12-step guided update | **MEGA65 File Host:** browse, search and download |
 | ![Upload a new file from GitHub](docs/screenshots/upload-new-file.png) | ![Upload a new version](docs/screenshots/upload-new-version.png) |
 | **File Host Upload:** a new file filled in from a GitHub release | **File Host Upload:** a new version, with previews |
-| ![Device](docs/screenshots/device.png) | ![Features](docs/screenshots/features.png) |
-| **Device:** connect, control and load files | **Features:** what is implemented and verified |
+| ![Core Manager](docs/screenshots/core-manager.png) | ![Device](docs/screenshots/device.png) |
+| **Core Manager (new in 1.1):** a library of FPGA cores; run one over JTAG, start a slot, or stage it for MEGAFLASH | **Device:** connect, control and load files |
+| ![Features](docs/screenshots/features.png) | |
+| **Features:** what is implemented and verified | |
 
 ## What it does
 
@@ -56,6 +58,19 @@ It brings together:
 - A Website Preview shows the description as the Filehost will show it.
 - You choose the task first, and nothing is uploaded or changed until you confirm.
 
+### Core Manager
+
+- Keep a library of FPGA cores (`.cor` and `.bit`, or a `.zip`/`.7z` containing them). Each file is checked (header, CRC32), stored once (SHA-256), and can have favourites, categories, tags, notes and artwork.
+- Find alternate, arcade and official cores on the Filehost, download them into the library, and see when a newer version is published.
+- Compatibility comes only from what a core's header says and what the MEGA65 reports. Boards named in file names are hints, and `.bit` files are never treated as confirmed.
+- Three separate actions:
+  - **Run now:** load a core temporarily over USB/JTAG. Nothing is written to flash.
+  - **Start a flash slot:** restart from a slot. Nothing is written.
+  - **Install to a flash slot:** copy the `.cor` to the SD card with approval, backup and verification, then follow the guided MEGAFLASH steps.
+- Copy a core's own SD-card files (for example Vixen-32's `vixen-32` folder) to the card exactly as its package lays them out, with the same approval, backup and verification. If another core is running, the app asks you to switch the MEGA65 off and on, then reconnects and carries on.
+- List the cores stored on the SD card. A core stored on the card is not installed: the MEGA65 cannot start a core from the card.
+- Why the MEGA65 cannot start cores straight from its SD card, and what could get around the eight-slot limit: [Core loading feasibility](docs/CORE-LOADING-FEASIBILITY.md).
+
 ### Device
 
 - Connect over USB/JTAG or Ethernet.
@@ -81,6 +96,7 @@ Installs the official mega65-tools builds from the Filehost.
 - [M65Connect feature parity](docs/M65CONNECT-PARITY.md)
 - [Licensing review](docs/LICENSING.md)
 - [Roadmap](docs/ROADMAP.md)
+- [Core loading feasibility (SD, flash slots, JTAG, Pico loader)](docs/CORE-LOADING-FEASIBILITY.md)
 
 ## Build
 

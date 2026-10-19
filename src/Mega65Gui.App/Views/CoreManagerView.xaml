@@ -1,0 +1,665 @@
+<UserControl x:Class="Mega65Gui.App.Views.CoreManagerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Mega65Gui.App.ViewModels">
+    <UserControl.Resources>
+        <!-- Coloured pill for compatibility and Filehost states -->
+        <Style x:Key="Badge" TargetType="Border">
+            <Setter Property="CornerRadius" Value="9"/>
+            <Setter Property="Padding" Value="8,1"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <!-- One of the three operations in the detail panel -->
+        <Style x:Key="ActionCard" TargetType="Border" BasedOn="{StaticResource Card}">
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style x:Key="EmptyIcon" TargetType="TextBlock" BasedOn="{StaticResource Icon}">
+            <Setter Property="FontSize" Value="30"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}"/>
+        </Style>
+    </UserControl.Resources>
+
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top">
+            <TextBlock Text="Core Manager" Style="{StaticResource PageTitle}"/>
+            <TextBlock Style="{StaticResource PageSubtitle}"
+                       Text="Keep a library of FPGA cores, find more on the Filehost, run one now over USB/JTAG, start a flash slot, or stage a core for MEGAFLASH."/>
+            <Expander Header="How to use this page" Style="{StaticResource PageHelp}">
+                <StackPanel Margin="24,6,0,0" MaxWidth="900" HorizontalAlignment="Left">
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Library"/><Run Text=" – Add .cor and .bit files (or a .zip/.7z that contains them) with Add cores or by dropping them on the list. Each file is checked and stored once; favourites, categories, tags, notes and artwork are yours to set."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Compatible"/><Run Text=" – Only when the core's header names the same board the MEGA65 reports. A .bit file does not say which board it is for, so it shows as Not confirmed; boards named in a file name are hints, never proof."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Run now (temporary)"/><Run Text=" – Loads the core into the FPGA over USB/JTAG with m65 (a .cor through the .bit it contains; a .bit only after you set its board). Nothing is written to flash and the MEGA65 goes back to its normal core when switched off."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Flash slots"/><Run Text=" – Restarts the MEGA65 from a core already in a slot. This app cannot read what a slot holds; the notes there are your own."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Install to a flash slot"/><Run Text=" – Copies the .cor to the SD card (you approve the change; anything replaced is backed up and the copy is verified). You then install it with MEGAFLASH on the MEGA65. Storing a core on the card does not make it startable."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Filehost"/><Run Text=" – Alternate, arcade and official cores from files.mega65.org. Downloads are checked and added to the library, and the library shows when a newer version is published."/></TextBlock>
+                </StackPanel>
+            </Expander>
+        </StackPanel>
+
+        <!-- ===== Hardware strip: status on top, controls on a row that wraps on narrow windows ===== -->
+        <Border DockPanel.Dock="Top" Style="{StaticResource Card}" Padding="12,8">
+            <StackPanel>
+                <DockPanel>
+                    <Ellipse VerticalAlignment="Top" Margin="0,5,10,0">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse" BasedOn="{StaticResource Dot}">
+                                <Setter Property="Fill" Value="#8A8A8A"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsUsbJtag}" Value="True"><Setter Property="Fill" Value="{StaticResource M65Green}"/></DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <StackPanel>
+                        <WrapPanel>
+                            <TextBlock Text="{Binding ConnectionText}" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                            <Border Style="{StaticResource Badge}" Background="{StaticResource M65Orange}"
+                                    Visibility="{Binding DeviceBusy, Converter={StaticResource NullToCollapsed}}">
+                                <TextBlock Text="{Binding DeviceBusy}" Foreground="White" FontSize="11"/>
+                            </Border>
+                        </WrapPanel>
+                        <TextBlock Text="{Binding HardwareHint}" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+                        <TextBlock Text="{Binding CompareAgainstText}" Style="{StaticResource Muted}" FontSize="11"/>
+                    </StackPanel>
+                </DockPanel>
+                <WrapPanel Margin="18,8,0,0">
+                    <!-- Inline USB/JTAG connect while not connected that way -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,16,4"
+                                Visibility="{Binding IsUsbJtag, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}">
+                        <ComboBox ItemsSource="{Binding Ports}" SelectedItem="{Binding SelectedPort}" MinWidth="90" Margin="0,0,6,0"
+                                  ToolTip="The MEGA65's USB/JTAG port"/>
+                        <Button Command="{Binding RefreshPortsCommand}" ToolTip="Refresh ports" Margin="0,0,6,0">
+                            <TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12"/>
+                        </Button>
+                        <Button Content="Connect" Style="{DynamicResource AccentButtonStyle}" Command="{Binding ConnectCommand}"
+                                ToolTip="Connect over USB/JTAG and read the model, core and ROM"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,16,4">
+                        <TextBlock Text="Check against" Style="{StaticResource Label}"/>
+                        <ComboBox ItemsSource="{Binding CompareChoices}" SelectedItem="{Binding CompareAgainst}" MinWidth="170"
+                                  ToolTip="The MEGA65 compatibility is checked against. Choosing a model is only for planning: it is never treated as confirmed."/>
+                    </StackPanel>
+                    <Button Command="{Binding InstallToolsCommand}" Style="{DynamicResource AccentButtonStyle}" Margin="0,0,6,4"
+                            Visibility="{Binding ToolsInstalled, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE896;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,6,0"/>
+                            <TextBlock Text="Install device tools"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Content="Device page" Command="{Binding OpenDeviceCommand}" Margin="0,0,0,4" ToolTip="All device controls and Ethernet"/>
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ===== Operation footer: progress, status, cancel and log ===== -->
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+            <Button DockPanel.Dock="Right" Content="Cancel" Command="{Binding CancelCommand}" VerticalAlignment="Top" Margin="8,4,0,0"
+                    Visibility="{Binding Operation, Converter={StaticResource NullToCollapsed}}"/>
+            <StackPanel>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource StatusFooter}"/>
+                <Expander Header="Operation log" Margin="0,4,0,0">
+                    <ListBox x:Name="LogList" ItemsSource="{Binding Log}" Height="120" FontFamily="Cascadia Mono, Consolas" FontSize="11"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap"/></DataTemplate></ListBox.ItemTemplate>
+                    </ListBox>
+                </Expander>
+            </StackPanel>
+        </DockPanel>
+
+        <TabControl SelectedIndex="{Binding SelectedTab}" Padding="0,8,0,0" Background="Transparent" BorderThickness="0">
+            <!-- ================= Library ================= -->
+            <TabItem Header="Library">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="11*" MinWidth="300"/><ColumnDefinition Width="10"/><ColumnDefinition Width="9*" MinWidth="300"/></Grid.ColumnDefinitions>
+                    <GridSplitter Grid.Column="1" Width="10" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext"/>
+
+                    <DockPanel>
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition/><ColumnDefinition Width="120"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid Margin="0,0,6,0">
+                                <TextBox Text="{Binding LibrarySearch, UpdateSourceTrigger=PropertyChanged, Delay=200}" Padding="28,4,8,4"
+                                         ToolTip="Search names, versions, tags, notes and boards"/>
+                                <TextBlock Text="&#xE721;" Style="{StaticResource Icon}" FontSize="12" Margin="10,0,0,0" IsHitTestVisible="False"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                            </Grid>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding LibraryCategories}" SelectedItem="{Binding LibraryCategory}" Margin="0,0,6,0" ToolTip="Category"/>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,6,0">
+                                <ToggleButton IsChecked="{Binding CardView, Converter={StaticResource Not}}" ToolTip="List" Padding="8,5" Margin="0,0,2,0">
+                                    <TextBlock Text="&#xE8FD;" Style="{StaticResource Icon}" FontSize="12"/>
+                                </ToggleButton>
+                                <ToggleButton IsChecked="{Binding CardView}" ToolTip="Cards" Padding="8,5">
+                                    <TextBlock Text="&#xF0E2;" Style="{StaticResource Icon}" FontSize="12"/>
+                                </ToggleButton>
+                            </StackPanel>
+                            <Button Grid.Column="3" Style="{DynamicResource AccentButtonStyle}" Command="{Binding ImportFilesCommand}"
+                                    ToolTip="Add .cor or .bit files, or a .zip/.7z package that contains them">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE710;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,6,0"/>
+                                    <TextBlock Text="Add cores"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <CheckBox Content="Favourites" IsChecked="{Binding FavoritesOnly}" Margin="0,0,12,0" MinWidth="0"/>
+                            <CheckBox Content="Compatible only" IsChecked="{Binding CompatibleOnly}" Margin="0,0,12,0" MinWidth="0"
+                                      ToolTip="Only cores whose header confirms they are for this MEGA65"/>
+                            <TextBlock Text="{Binding LibraryInfo}" Style="{StaticResource Muted}" VerticalAlignment="Center"/>
+                        </WrapPanel>
+
+                        <Border x:Name="LibraryDrop" Style="{StaticResource Card}" Padding="2" Margin="0" AllowDrop="True" Drop="LibraryDrop_Drop" DragOver="LibraryDrop_DragOver">
+                            <Grid>
+                                <!-- Empty library -->
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="380" Margin="16"
+                                            Visibility="{Binding LibraryEmpty, Converter={StaticResource BoolToVisible}}">
+                                    <TextBlock Text="&#xE8F1;" Style="{StaticResource EmptyIcon}"/>
+                                    <TextBlock Text="Your core library is empty" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,8,0,4"/>
+                                    <TextBlock Style="{StaticResource Muted}" TextAlignment="Center"
+                                               Text="Drop .cor or .bit files (or a .zip/.7z with cores) here, press Add cores, or download one from the Filehost tab."/>
+                                </StackPanel>
+
+                                <!-- List view -->
+                                <ListView ItemContainerStyle="{StaticResource CompactRow}" ItemsSource="{Binding LibraryRows}" SelectedItem="{Binding Selected}"
+                                          BorderThickness="0" Background="Transparent">
+                                    <ListView.Style>
+                                        <Style TargetType="ListView" BasedOn="{StaticResource {x:Type ListView}}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CardView}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                                <DataTrigger Binding="{Binding LibraryEmpty}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ListView.Style>
+                                    <ListView.View>
+                                        <GridView>
+                                            <GridViewColumn Header="" Width="28">
+                                                <GridViewColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="&#xE735;" Style="{StaticResource Icon}" FontSize="11" Foreground="{StaticResource M65Yellow}" ToolTip="Favourite"
+                                                                   Visibility="{Binding Favorite, Converter={StaticResource BoolToVisible}}"/>
+                                                    </DataTemplate>
+                                                </GridViewColumn.CellTemplate>
+                                            </GridViewColumn>
+                                            <GridViewColumn Header="Name" Width="170">
+                                                <GridViewColumn.CellTemplate>
+                                                    <DataTemplate><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Entry.FileName}"/></DataTemplate>
+                                                </GridViewColumn.CellTemplate>
+                                            </GridViewColumn>
+                                            <GridViewColumn Header="Type" Width="52" DisplayMemberBinding="{Binding KindLabel}"/>
+                                            <GridViewColumn Header="Built for" Width="120">
+                                                <GridViewColumn.CellTemplate>
+                                                    <DataTemplate><TextBlock Text="{Binding TargetLabel}" TextTrimming="CharacterEllipsis" ToolTip="{Binding TargetLabel}"/></DataTemplate>
+                                                </GridViewColumn.CellTemplate>
+                                            </GridViewColumn>
+                                            <GridViewColumn Header="This MEGA65" Width="128">
+                                                <GridViewColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Orientation="Horizontal" ToolTip="{Binding Verdict.Summary}">
+                                                            <Ellipse Style="{StaticResource Dot}" Fill="{Binding Compatibility, Converter={StaticResource StatusBrush}}" Margin="0,0,6,0"/>
+                                                            <TextBlock Text="{Binding CompatibilityLabel}" FontSize="12"/>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </GridViewColumn.CellTemplate>
+                                            </GridViewColumn>
+                                            <GridViewColumn Header="" Width="60">
+                                                <GridViewColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="Update" FontSize="11" Foreground="{StaticResource M65Blue}" ToolTip="A newer version of this core is on the Filehost"
+                                                                   Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVisible}}"/>
+                                                    </DataTemplate>
+                                                </GridViewColumn.CellTemplate>
+                                            </GridViewColumn>
+                                        </GridView>
+                                    </ListView.View>
+                                </ListView>
+
+                                <!-- Card view -->
+                                <ListBox ItemsSource="{Binding LibraryRows}" SelectedItem="{Binding Selected}" BorderThickness="0" Background="Transparent"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListBox.Style>
+                                        <Style TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CardView}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ListBox.Style>
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem">
+                                            <Setter Property="Margin" Value="4"/>
+                                            <Setter Property="Cursor" Value="Hand"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="ListBoxItem">
+                                                        <Border x:Name="Bd" Width="164" CornerRadius="6" BorderThickness="1" Padding="0,0,0,8"
+                                                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                                                            <ContentPresenter/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ControlStrongStrokeColorDefaultBrush}"/>
+                                                            </Trigger>
+                                                            <Trigger Property="IsSelected" Value="True">
+                                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+                                                                <Setter TargetName="Bd" Property="BorderThickness" Value="2"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ListBox.ItemContainerStyle>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:LibraryRow}">
+                                            <StackPanel>
+                                                <Grid Height="92">
+                                                    <Border CornerRadius="5,5,0,0" Background="{DynamicResource SubtleFillColorSecondaryBrush}">
+                                                        <TextBlock Text="{Binding Initials}" FontSize="26" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                                                    </Border>
+                                                    <Image Source="{Binding ArtworkPath, Converter={StaticResource PathToImage}, ConverterParameter=330}" Stretch="UniformToFill"
+                                                           Visibility="{Binding HasArtwork, Converter={StaticResource BoolToVisible}}"/>
+                                                    <TextBlock Text="&#xE735;" Style="{StaticResource Icon}" FontSize="13" Foreground="{StaticResource M65Yellow}"
+                                                               HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,8,0"
+                                                               Visibility="{Binding Favorite, Converter={StaticResource BoolToVisible}}"/>
+                                                </Grid>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Margin="8,6,8,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}"/>
+                                                <TextBlock Margin="8,1,8,4" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap">
+                                                    <Run Text="{Binding KindLabel, Mode=OneWay}"/> · <Run Text="{Binding TargetLabel, Mode=OneWay}"/>
+                                                </TextBlock>
+                                                <StackPanel Orientation="Horizontal" Margin="8,0" ToolTip="{Binding Verdict.Summary}">
+                                                    <Ellipse Style="{StaticResource Dot}" Fill="{Binding Compatibility, Converter={StaticResource StatusBrush}}" Margin="0,0,6,0"/>
+                                                    <TextBlock Text="{Binding CompatibilityLabel}" FontSize="11.5"/>
+                                                    <TextBlock Text=" · Update" FontSize="11.5" Foreground="{StaticResource M65Blue}"
+                                                               Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVisible}}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </DockPanel>
+
+                    <!-- ===== Detail panel ===== -->
+                    <Border Grid.Column="2" Style="{StaticResource Card}" Margin="0">
+                        <Grid>
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                        Visibility="{Binding Selected, Converter={StaticResource NullToCollapsed}, ConverterParameter=invert}">
+                                <TextBlock Text="&#xE950;" Style="{StaticResource EmptyIcon}"/>
+                                <TextBlock Text="Select a core to see its details and what you can do with it" Style="{StaticResource Muted}" Margin="0,8,0,0"/>
+                            </StackPanel>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding Selected, Converter={StaticResource NullToCollapsed}}">
+                                <StackPanel Margin="0,0,14,0">
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <Border Width="64" Height="64" CornerRadius="6" Margin="0,0,10,0" Background="{DynamicResource SubtleFillColorSecondaryBrush}" ClipToBounds="True">
+                                            <Grid>
+                                                <TextBlock Text="{Binding Selected.Initials}" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                                                <Image Source="{Binding Selected.ArtworkPath, Converter={StaticResource PathToImage}, ConverterParameter=128}" Stretch="UniformToFill"/>
+                                            </Grid>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Selected.Name}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Selected.Version}" Style="{StaticResource Muted}"/>
+                                            <Border Style="{StaticResource Badge}" Margin="0,4,0,0" Background="{Binding Selected.Compatibility, Converter={StaticResource StatusBrush}}">
+                                                <TextBlock Text="{Binding Selected.CompatibilityLabel}" Foreground="White" FontSize="11"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Command="{Binding ToggleFavoriteCommand}" ToolTip="Favourite" VerticalAlignment="Top" Padding="8,5">
+                                            <TextBlock FontSize="13">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Icon}">
+                                                        <Setter Property="Text" Value="&#xE734;"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Selected.Favorite}" Value="True">
+                                                                <Setter Property="Text" Value="&#xE735;"/>
+                                                                <Setter Property="Foreground" Value="{StaticResource M65Yellow}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Button>
+                                    </Grid>
+                                    <TextBlock Text="{Binding Selected.Verdict.Summary}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                                    <!-- A. Run now (temporary) -->
+                                    <Border Style="{StaticResource ActionCard}">
+                                        <StackPanel>
+                                            <DockPanel>
+                                                <Button DockPanel.Dock="Right" Style="{DynamicResource AccentButtonStyle}" Command="{Binding RunCoreCommand}" IsEnabled="{Binding CanRun}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="&#xE768;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,6,0"/>
+                                                        <TextBlock Text="Run now"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <StackPanel>
+                                                    <TextBlock Text="Run now · temporary" Style="{StaticResource SectionTitle}" Margin="0"/>
+                                                    <TextBlock Style="{StaticResource Muted}" Text="Loads the core into the FPGA over USB/JTAG (a .cor through the .bit inside it). Lost at power-off; flash is not touched."/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                            <TextBlock Text="{Binding RunBlocker}" Style="{StaticResource Muted}" Margin="0,6,0,0" Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                                       Visibility="{Binding RunBlocker, Converter={StaticResource NullToCollapsed}}"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- C. Install to a flash slot (staged; guided MEGAFLASH) -->
+                                    <Border Style="{StaticResource ActionCard}">
+                                        <StackPanel>
+                                            <TextBlock Text="Install to a flash slot · with MEGAFLASH" Style="{StaticResource SectionTitle}" Margin="0"/>
+                                            <TextBlock Style="{StaticResource Muted}" Text="Copies the .cor to the SD card for MEGAFLASH; you install it on the MEGA65. This app never writes flash."/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                                <RadioButton Content="Card in the MEGA65" IsChecked="{Binding CardInDevice}" Margin="0,0,12,0" MinWidth="0"/>
+                                                <RadioButton Content="Card in a PC reader" IsChecked="{Binding CardInDevice, Converter={StaticResource Not}}" MinWidth="0"/>
+                                            </StackPanel>
+                                            <Grid Margin="0,6,0,0" Visibility="{Binding CardInDevice, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}">
+                                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                                <TextBox Text="{Binding SdCardPath, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0" ToolTip="The card's drive (for example E:\)"/>
+                                                <Button Grid.Column="1" Content="Browse…" Command="{Binding BrowseSdCardCommand}"/>
+                                            </Grid>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                                <Button Content="Copy to SD card" Command="{Binding StageCommand}" IsEnabled="{Binding CanStage}" Margin="0,0,6,0"/>
+                                                <Button Content="MEGAFLASH steps" Command="{Binding ShowFlashStepsCommand}"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding StageBlocker}" Style="{StaticResource Muted}" Margin="0,6,0,0"
+                                                       Visibility="{Binding StageBlocker, Converter={StaticResource NullToCollapsed}}"/>
+                                            <Border CornerRadius="4" Padding="8" Margin="0,8,0,0" Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                                    Visibility="{Binding FlashSteps, Converter={StaticResource NullToCollapsed}}">
+                                                <DockPanel>
+                                                    <Button DockPanel.Dock="Right" Command="{Binding HideFlashStepsCommand}" VerticalAlignment="Top" Padding="6" MinWidth="0" MinHeight="0"
+                                                            Background="Transparent" BorderThickness="0" ToolTip="Hide">
+                                                        <TextBlock Text="&#xE711;" Style="{StaticResource Icon}" FontSize="10"/>
+                                                    </Button>
+                                                    <TextBlock Text="{Binding FlashSteps}" TextWrapping="Wrap" FontSize="12"/>
+                                                </DockPanel>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- The core's own files for the SD card -->
+                                    <Border Style="{StaticResource ActionCard}">
+                                        <StackPanel>
+                                            <DockPanel>
+                                                <Button DockPanel.Dock="Right" Content="Copy SD-card files" Command="{Binding CopySdFilesCommand}" VerticalAlignment="Top"
+                                                        ToolTip="Uses the card chosen above (in the MEGA65 or in a PC reader). You approve the file list first."/>
+                                                <StackPanel Margin="0,0,8,0">
+                                                    <TextBlock Text="The core's SD-card files" Style="{StaticResource SectionTitle}" Margin="0"/>
+                                                    <TextBlock Text="{Binding SdFilesInfo}" Style="{StaticResource Muted}"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Expander Header="Details" IsExpanded="True" Margin="0,4,0,0">
+                                        <TextBlock Text="{Binding Facts}" Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+                                    </Expander>
+
+                                    <Expander Header="Your notes, tags and artwork" Margin="0,4,0,0">
+                                        <Grid Margin="0,8,0,0">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="72"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="Name" Style="{StaticResource Label}"/>
+                                            <TextBox Grid.Column="1" Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6"/>
+                                            <TextBlock Grid.Row="1" Text="Category" Style="{StaticResource Label}"/>
+                                            <ComboBox Grid.Row="1" Grid.Column="1" IsEditable="True" ItemsSource="{Binding KnownCategories}" Text="{Binding EditCategory, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6"/>
+                                            <TextBlock Grid.Row="2" Text="Tags" Style="{StaticResource Label}"/>
+                                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding EditTags, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6" ToolTip="Separate tags with commas"/>
+                                            <TextBlock Grid.Row="3" Text="Notes" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,6,8,0"/>
+                                            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding EditNotes, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap"
+                                                     MinHeight="56" Margin="0,0,0,6"/>
+                                            <TextBlock Grid.Row="4" Text="Board" Style="{StaticResource Label}"
+                                                       Visibility="{Binding IsBitstream, Converter={StaticResource BoolToVisible}}"/>
+                                            <StackPanel Grid.Row="4" Grid.Column="1" Margin="0,0,0,6" Visibility="{Binding IsBitstream, Converter={StaticResource BoolToVisible}}">
+                                                <ComboBox ItemsSource="{Binding DeclaredChoices}" SelectedItem="{Binding EditDeclaredModel}"/>
+                                                <TextBlock Style="{StaticResource Muted}" FontSize="11" Margin="0,2,0,0"
+                                                           Text="Your own label for this .bit. It is shown as yours and never counts as confirmed."/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Row="5" Text="Artwork" Style="{StaticResource Label}"/>
+                                            <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
+                                                <Button Content="Choose image…" Command="{Binding ChooseArtworkCommand}" Margin="0,0,6,0"/>
+                                                <Button Content="Remove" Command="{Binding ClearArtworkCommand}" Visibility="{Binding Selected.HasArtwork, Converter={StaticResource BoolToVisible}}"/>
+                                            </StackPanel>
+                                            <Button Grid.Row="6" Grid.Column="1" Content="Save details" Command="{Binding SaveDetailsCommand}" HorizontalAlignment="Left"/>
+                                        </Grid>
+                                    </Expander>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                        <Button Content="Export…" Command="{Binding ExportCommand}" Margin="0,0,6,0" ToolTip="Save a copy of the core file (checked after copying)"/>
+                                        <Button Content="Show in folder" Command="{Binding ShowInFolderCommand}" Margin="0,0,6,0"/>
+                                        <Button Content="Remove from library" Command="{Binding RemoveCommand}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- ================= Filehost ================= -->
+            <TabItem Header="Filehost">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition/><ColumnDefinition Width="140"/><ColumnDefinition Width="110"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid Margin="0,0,6,0">
+                            <TextBox Text="{Binding FilehostSearch, UpdateSourceTrigger=PropertyChanged, Delay=200}" Padding="28,4,8,4" ToolTip="Search titles, authors, file names and versions"/>
+                            <TextBlock Text="&#xE721;" Style="{StaticResource Icon}" FontSize="12" Margin="10,0,0,0" IsHitTestVisible="False"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        </Grid>
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding FilehostKinds}" SelectedItem="{Binding FilehostKind}" Margin="0,0,6,0" ToolTip="Kind of core"/>
+                        <ComboBox Grid.Column="2" ItemsSource="{Binding ModelFilters}" SelectedItem="{Binding FilehostModel}" Margin="0,0,6,0"
+                                  ToolTip="Boards named in the title or file name. Only a hint: the board is confirmed from the core's header after download."/>
+                        <CheckBox Grid.Column="3" Content="Official" IsChecked="{Binding FilehostOfficialOnly}" Margin="0,0,6,0" MinWidth="0" VerticalAlignment="Center"/>
+                        <Button Grid.Column="4" Command="{Binding RefreshFilehostCommand}" CommandParameter="{x:Static vm:Flags.True}" ToolTip="Refresh from the Filehost">
+                            <TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12"/>
+                        </Button>
+                    </Grid>
+                    <TextBlock DockPanel.Dock="Top" Text="{Binding FilehostInfo}" Style="{StaticResource Muted}" Margin="0,0,0,6"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="11*" MinWidth="300"/><ColumnDefinition Width="10"/><ColumnDefinition Width="9*" MinWidth="280"/></Grid.ColumnDefinitions>
+                        <GridSplitter Grid.Column="1" Width="10" HorizontalAlignment="Stretch" Background="Transparent" ResizeBehavior="PreviousAndNext"/>
+                        <Border Style="{StaticResource Card}" Padding="2" Margin="0">
+                            <ListView ItemContainerStyle="{StaticResource CompactRow}" ItemsSource="{Binding FilehostRows}" SelectedItem="{Binding SelectedFilehost}" BorderThickness="0" Background="Transparent">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Title" Width="190">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate><TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Title}"/></DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="Kind" Width="96" DisplayMemberBinding="{Binding Kind}"/>
+                                        <GridViewColumn Header="Named boards" Width="96" DisplayMemberBinding="{Binding NamedModels}"/>
+                                        <GridViewColumn Header="Author" Width="80">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate><TextBlock Text="{Binding Author}" TextTrimming="CharacterEllipsis"/></DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="" Width="72">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding StateLabel}" FontSize="11" Foreground="{Binding State, Converter={StaticResource StatusBrush}}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </Border>
+                        <Border Grid.Column="2" Style="{StaticResource Card}" Margin="0">
+                            <Grid>
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                            Visibility="{Binding SelectedFilehost, Converter={StaticResource NullToCollapsed}, ConverterParameter=invert}">
+                                    <TextBlock Text="&#xE753;" Style="{StaticResource EmptyIcon}"/>
+                                    <TextBlock Text="Select a core to see its versions" Style="{StaticResource Muted}" Margin="0,8,0,0"/>
+                                </StackPanel>
+                                <DockPanel Visibility="{Binding SelectedFilehost, Converter={StaticResource NullToCollapsed}}">
+                                    <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                                        <ProgressBar Value="{Binding DownloadPercent}" Height="2" Maximum="100" Margin="0,0,0,8"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Style="{DynamicResource AccentButtonStyle}" Command="{Binding DownloadCommand}" Margin="0,0,6,0"
+                                                    ToolTip="Download the selected version, check it and add its cores to the library">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="&#xE896;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,6,0"/>
+                                                    <TextBlock Text="Download to library"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Content="Open on website" Command="{Binding OpenOnWebsiteCommand}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <StackPanel Margin="0,0,14,0">
+                                            <TextBlock Text="{Binding SelectedFilehost.Title}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                            <TextBlock Style="{StaticResource Muted}" Margin="0,2,0,6">
+                                                <Run Text="{Binding SelectedFilehost.Kind, Mode=OneWay}"/> · <Run Text="{Binding SelectedFilehost.Author, Mode=OneWay}"/>
+                                            </TextBlock>
+                                            <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,8" Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                                       Visibility="{Binding SelectedFilehost.NamedModels, Converter={StaticResource NullToCollapsed}}">
+                                                <Run Text="Named boards:"/> <Run Text="{Binding SelectedFilehost.NamedModels, Mode=OneWay}"/><Run Text=" (from the title or file name; checked from the core header after download)"/>
+                                            </TextBlock>
+                                            <TextBlock v:FilehostText.Text="{Binding FilehostDetail.Description}" xmlns:v="clr-namespace:Mega65Gui.App.Views" TextWrapping="Wrap" FontSize="12.5" MaxHeight="200"/>
+                                            <StackPanel Visibility="{Binding Versions.Count, Converter={StaticResource NullToCollapsed}}" Margin="0,10,0,0">
+                                                <TextBlock Text="Versions" Style="{StaticResource SectionTitle}"/>
+                                                <ListView ItemContainerStyle="{StaticResource CompactRow}" ItemsSource="{Binding Versions}" SelectedItem="{Binding SelectedVersion}" MaxHeight="180">
+                                                    <ListView.View>
+                                                        <GridView>
+                                                            <GridViewColumn Header="File" Width="200">
+                                                                <GridViewColumn.CellTemplate>
+                                                                    <DataTemplate><TextBlock Text="{Binding Row.FileName}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Row.FileName}"/></DataTemplate>
+                                                                </GridViewColumn.CellTemplate>
+                                                            </GridViewColumn>
+                                                            <GridViewColumn Header="Published" Width="88" DisplayMemberBinding="{Binding Row.Published}"/>
+                                                            <GridViewColumn Header="" Width="28">
+                                                                <GridViewColumn.CellTemplate>
+                                                                    <DataTemplate>
+                                                                        <TextBlock Text="&#xE73E;" Style="{StaticResource Icon}" FontSize="11" Foreground="{StaticResource M65Green}" ToolTip="Current version"
+                                                                                   Visibility="{Binding Row.IsActive, Converter={StaticResource BoolToVisible}}"/>
+                                                                    </DataTemplate>
+                                                                </GridViewColumn.CellTemplate>
+                                                            </GridViewColumn>
+                                                        </GridView>
+                                                    </ListView.View>
+                                                </ListView>
+                                                <TextBlock Text="{Binding SelectedVersion.Row.Comment}" Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </DockPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ================= Flash slots ================= -->
+            <TabItem Header="Flash slots">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="Start a core already in flash" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="{Binding SlotInfo}" Style="{StaticResource Muted}"/>
+                            <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,0"
+                                       Text="Starting a slot restarts the FPGA from that slot over USB/JTAG (m65 -Z). Nothing is written to flash. Anything unsaved on the MEGA65 is lost."/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Card}" Padding="6" Margin="0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding SlotRows}" Margin="0,0,14,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:SlotRow}">
+                                        <Grid Margin="6,4">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="Not on this board" Style="{StaticResource Muted}" FontSize="11"
+                                                           Visibility="{Binding Exists, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}"/>
+                                            </StackPanel>
+                                            <TextBox Grid.Column="1" Text="{Binding Note, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                     ToolTip="Your own note about what you installed in this slot. It is not read from the flash."/>
+                                            <Button Grid.Column="2" Content="Save note" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                    Command="{Binding DataContext.SaveSlotNoteCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                            <Button Grid.Column="3" Content="Start slot" VerticalAlignment="Center" IsEnabled="{Binding Exists}"
+                                                    Command="{Binding DataContext.BootSlotCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ================= SD card ================= -->
+            <TabItem Header="SD card">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Style="{StaticResource Card}">
+                        <StackPanel>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Command="{Binding RefreshCardCommand}" Style="{DynamicResource AccentButtonStyle}" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,6,0"/>
+                                        <TextBlock Text="List cores on card"/>
+                                    </StackPanel>
+                                </Button>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <RadioButton Content="Card in the MEGA65" IsChecked="{Binding CardInDevice}" Margin="0,0,16,0" MinWidth="0"/>
+                                    <RadioButton Content="Card in a PC reader" IsChecked="{Binding CardInDevice, Converter={StaticResource Not}}" MinWidth="0"/>
+                                </StackPanel>
+                            </DockPanel>
+                            <Grid Margin="0,8,0,0" Visibility="{Binding CardInDevice, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}">
+                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding SdCardPath, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0" ToolTip="The card's drive (for example E:\)"/>
+                                <Button Grid.Column="1" Content="Browse…" Command="{Binding BrowseSdCardCommand}" Margin="0,0,6,0"/>
+                                <Button Grid.Column="2" Content="Eject" Command="{Binding EjectCardCommand}" ToolTip="Safely eject the SD card from this PC's card reader"/>
+                            </Grid>
+                            <TextBlock Text="{Binding CardInfo}" Style="{StaticResource Muted}" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="Add selected to library" Command="{Binding ImportFromCardCommand}" Margin="0,0,6,0"
+                                ToolTip="Copy a core from a card in a PC reader into the library"/>
+                        <TextBlock Style="{StaticResource Muted}" VerticalAlignment="Center"
+                                   Text="To put a library core on the card, select it in the Library and use Copy to SD card."/>
+                    </StackPanel>
+                    <Border Style="{StaticResource Card}" Padding="2" Margin="0">
+                        <ListView ItemContainerStyle="{StaticResource CompactRow}" ItemsSource="{Binding CardRows}" SelectedItem="{Binding SelectedCardCore}" BorderThickness="0" Background="Transparent">
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="File" Width="200" DisplayMemberBinding="{Binding Name}"/>
+                                    <GridViewColumn Header="Size" Width="90" DisplayMemberBinding="{Binding Size, StringFormat={}{0:N0}}"/>
+                                    <GridViewColumn Header="Header" Width="290">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate><TextBlock Text="{Binding Detail}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Detail}"/></DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                    <GridViewColumn Header="Library" Width="190">
+                                        <GridViewColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Ellipse Style="{StaticResource Dot}" Margin="0,0,6,0" Fill="{Binding Compatibility, Converter={StaticResource StatusBrush}}"
+                                                             Visibility="{Binding Compatibility, Converter={StaticResource NullToCollapsed}}"/>
+                                                    <TextBlock Text="{Binding LibraryState}" TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </GridViewColumn.CellTemplate>
+                                    </GridViewColumn>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                    </Border>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</UserControl>

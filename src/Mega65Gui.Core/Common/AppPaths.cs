@@ -22,6 +22,8 @@ public sealed class AppPaths
     public string Tools => Ensure("tools");
     public string Backups => Ensure("backups");
     public string Reports => Ensure("reports");
+    /// <summary>The Core Manager's library: imported core files, artwork and the metadata index.</summary>
+    public string CoreLibrary => Ensure("library", "cores");
     public string SettingsFile => Path.Combine(Root, "settings.json");
 
     private string Ensure(params string[] parts)

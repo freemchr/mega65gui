@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace Mega65Gui.Core.Cores;
 
@@ -7,9 +8,9 @@ public sealed record CoreFileInfo(
     string CoreName, string CoreVersion, string Target, byte ModelId,
     int EmbeddedFiles, uint CoreSize, uint StoredCrc, uint ComputedCrc, long FileLength)
 {
-    public bool CrcMatches => StoredCrc == ComputedCrc;
-    public bool SizeFits => CoreSize >= CoreFile.HeaderSize && CoreSize <= FileLength;
-    public bool IsValid => CrcMatches && SizeFits;
+    [JsonIgnore] public bool CrcMatches => StoredCrc == ComputedCrc;
+    [JsonIgnore] public bool SizeFits => CoreSize >= CoreFile.HeaderSize && CoreSize <= FileLength;
+    [JsonIgnore] public bool IsValid => CrcMatches && SizeFits;
 }
 
 /// <summary>
@@ -70,6 +71,24 @@ public static class CoreFile
         var crc = 0xFFFFFFFFu;
         foreach (var b in data) crc = Table[(crc ^ b) & 0xFF] ^ (crc >> 8);
         return ~crc;
+    }
+
+    /// <summary>
+    /// The .bit inside a core file. bit2core copies the Vivado .bit verbatim after the 4096-byte
+    /// header (mega65-tools bit2core.c build_core_file; coretool.py --extract does the same), so
+    /// the bytes are only returned when they parse as a complete .bit whose data ends within the
+    /// core. Anything else (a damaged core, or one built another way) is refused, never guessed.
+    /// </summary>
+    public static byte[] ExtractBitstream(byte[] data)
+    {
+        var info = Parse(data);
+        if (!info.IsValid) throw new InvalidDataException("The core file failed its CRC or size check, so its bitstream is not extracted.");
+        var body = data.AsSpan(HeaderSize, (int)info.CoreSize - HeaderSize).ToArray();
+        BitstreamInfo bit;
+        try { bit = BitstreamFile.Parse(body); }
+        catch (InvalidDataException) { throw new InvalidDataException("This core file does not hold a Vivado .bit after its header, so it cannot be loaded over JTAG."); }
+        if (!bit.IsValid) throw new InvalidDataException("The bitstream inside this core file is incomplete, so it cannot be loaded over JTAG.");
+        return body[..(bit.DataOffset + bit.DataLength)];
     }
 
     /// <summary>bit2core arguments: target, bitstream, name, version, output.</summary>

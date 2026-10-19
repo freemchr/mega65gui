@@ -72,6 +72,14 @@ The in-app **Features** page shows the same list from `src/Mega65Gui.Core/Featur
 | ROM | ROM Configurator (speed, font, colours) | Native | None | Implemented |
 | ROM | ROM patch apply/create (.rdf) | `romdiff`, `bsdiff` | `romdiff` | Partial (apply only) |
 | Cores | COR build and verify | `bit2core`/`bit2mcs` (removed in 2.4) | `bit2core` + header/CRC32 check | Implemented (verified with the 0.97.2 core) |
+| Cores | Core library (import, SHA-256 duplicates, favourites, categories, tags, notes, artwork, export) | – | CoreLibrary (index.json, verified copies) | Implemented |
+| Cores | Hardware compatibility check for cores | – | CoreTargets: .cor target and model ID against the model read from the MEGA65 | Implemented |
+| Cores | Discover and download cores from the Filehost | – | Catalogue category Firmware: Alternate Core, Arcade Core, Release Package | Implemented |
+| Cores | Run a library core temporarily over JTAG | – | m65 -q; a .cor through the .bit stored in it | Implemented (Vixen-32 on an R6) |
+| Cores | Copy a core's own SD-card files | – | Package folder copied as laid out; mega65_ftp mkdir/cd/put with read-back | Hardware unverified |
+| Cores | Stage a core on the SD card for MEGAFLASH | – | SdSyncPlanner/Executor or mega65_ftp with read-back | Hardware unverified |
+| Cores | List cores stored on the SD card | – | Folder scan with header check; mega65_ftp dir | Hardware unverified |
+| Cores | Start a core directly from the SD card without flashing | – | - | Not offered |
 | Developer | Memory dump, unit-test runner, breakpoints | – | Monitor `M`/`b`/`t0`; `m65 -u -w` | Implemented (verified on an R6) |
 
 ## Hardware facts used

@@ -4,6 +4,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Mega65Gui.App.Services;
 using Mega65Gui.App.ViewModels;
+using Mega65Gui.Core.Common;
 
 namespace Mega65Gui.App;
 
@@ -17,6 +18,9 @@ public partial class App : Application
         base.OnStartup(e);
         DispatcherUnhandledException += (_, args) =>
         {
+            // The message alone often hides the cause (XAML errors wrap it), so keep the whole exception.
+            try { File.WriteAllText(Path.Combine(AppPaths.Default().Reports, "last-error.txt"), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}\n{args.Exception}"); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
             MessageBox.Show(args.Exception.Message, "MEGA65 GUI", MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
         };
@@ -83,6 +87,11 @@ public partial class App : Application
             await page.OnShownAsync();
             if (page is CatalogueViewModel cat)
                 cat.SelectedFile = cat.Results.FirstOrDefault(f => f.Title.Contains("Release Package (mega65r6)"));
+            if (page is CoreManagerViewModel cores && cores.LibraryRows.Count > 0)
+            {
+                cores.CompareAgainst = cores.CompareChoices.FirstOrDefault(c => c.Model == Mega65Gui.Core.Device.HardwareModel.R6);
+                cores.Selected = cores.LibraryRows.FirstOrDefault(r => r.Favorite) ?? cores.LibraryRows[0];
+            }
             var name = $"{vm.Pages.ToList().IndexOf(page) + 1}-{page.Title.Replace(' ', '-')}";
             await CaptureAsync(window, page, Path.Combine(folder, $"{name}.png"));
 
