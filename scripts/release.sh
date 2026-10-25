@@ -32,6 +32,10 @@ NOTES="publish/release-notes-$VERSION.md"
 [[ "$(git branch --show-current)" == main ]] || { echo "Release from main." >&2; exit 1; }
 [[ -z "$(git status --porcelain)" ]] || { echo "Commit or stash your changes first." >&2; exit 1; }
 if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then echo "v$VERSION is already tagged." >&2; exit 1; fi
+if [[ "$PUBLISH" == "--publish" ]] && { [[ ! -f "$NOTES" ]] || grep -q '<one line on what is new>' "$NOTES"; }; then
+  echo "Run scripts/release.sh $VERSION first, then write the release notes: $NOTES" >&2
+  exit 1
+fi
 
 echo "== Version $VERSION"
 sed -i -E "s#<Version>[^<]+</Version>#<Version>$VERSION</Version>#" "$CSPROJ"
