@@ -34,3 +34,7 @@ scripts/release.sh 1.2 --publish
 ```
 
 This rebuilds, pushes `main`, creates the GitHub release as the latest with the zip, and checks that GitHub's copy has the same SHA-256. The README's download link always points at the latest release, and the app's start-up check tells users about it.
+
+## 4. Tell people
+
+The start-up check only exists from 1.2 on. Anyone on 1.1.1 or older never hears about a new version from the app, so announce each release yourself: reply to whoever reported the problem it fixes, update the Filehost page, and post on the forums. In the 1.2 notes, say that later versions will announce themselves.
