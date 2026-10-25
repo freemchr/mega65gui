@@ -73,8 +73,9 @@ public sealed partial class UpdateViewModel : PageViewModel
         SelectedModel ??= ModelChoices[0];
         RefreshPorts();
         ShowConnection();
-        // Default to the card inside the MEGA65 when one is connected or its USB/JTAG adapter is present.
-        if (!_cardChoiceMade) { CardInDevice = IsConnected || Ports.Count > 0; _cardChoiceMade = false; }
+        // Default to the card inside the MEGA65 only when one is connected. Any COM port is not
+        // enough: many PCs have Bluetooth or modem ports that are not a MEGA65.
+        if (!_cardChoiceMade) { CardInDevice = IsConnected; _cardChoiceMade = false; }
         return Task.CompletedTask;
     }
 
@@ -158,9 +159,16 @@ public sealed partial class UpdateViewModel : PageViewModel
     [RelayCommand]
     private async Task RunAsync()
     {
-        // Connect first when the update needs the MEGA65: the card is inside it, or the model is "Auto".
-        var needsDevice = CardInDevice || SelectedModel?.Model is null;
-        if (needsDevice && (services.Connection is null || services.Device.NoResponse))
+        var connected = services.Connection is not null && !services.Device.NoResponse;
+        // A card in a PC reader usually means the MEGA65 is not connected, so "Auto" cannot read
+        // the model. Ask for the model rather than a COM port.
+        if (!CardInDevice && SelectedModel?.Model is null && !connected)
+        {
+            Status = "Choose your MEGA65 model. \"Auto\" can only read it from a MEGA65 connected by the USB cable.";
+            return;
+        }
+        // The card inside the MEGA65 is reached over USB/JTAG: connect first.
+        if (CardInDevice && !connected)
         {
             IsBusy = true;
             try
