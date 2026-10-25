@@ -635,8 +635,12 @@
                     <StackPanel Margin="24,6,0,0" MaxWidth="900" HorizontalAlignment="Left">
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Connection"/><Run Text=" – Pick the USB/JTAG COM port and press Connect, or find the MEGA65 on your network with Ethernet. Most features need USB/JTAG."/></TextBlock>
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Reset, C64, MEGA65"/><Run Text=" – Restart the machine, or restart it straight into C64 or MEGA65 mode. Anything unsaved in memory is lost."/></TextBlock>
-                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Camera button"/><Run Text=" – Saves a picture of the MEGA65's screen as a PNG file."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Camera button"/><Run Text=" – Saves a picture of the MEGA65's screen as a PNG file in your Pictures folder and shows it on this page."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Without a reset"/><Run Text=" – Go 64 switches to C64 mode the way typing GO64 does; Go 65 types SYS 58552 in C64 mode to come back. Neither restarts the machine."/></TextBlock>
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Drop a file to send it"/><Run Text=" – Drag a program (.prg) here, or press Choose, to load it into the MEGA65. Tick Run to start it; tick C64 program for C64 software."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="More options"/><Run Text=" – Reset first (untick to load into the running machine), load to the address stored in the file (like LOAD&quot;…&quot;,8,1), switch to PAL or NTSC, and over Ethernet mount a .D81 from the card's root folder with the program."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Disk from this PC"/><Run Text=" – Uses a .D81 on your PC as the MEGA65's drive 8 over the USB cable, without copying it to the card. The MEGA65 can read and save to it until you press Stop. A backup copy is made first. Do not reset the MEGA65 while it is in use."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="BASIC editor"/><Run Text=" – Write or paste a BASIC listing, save it as a .bas text file, and type it into the MEGA65 at the READY prompt."/></TextBlock>
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="SID tune"/><Run Text=" – Plays a C64 music file (.sid). The MEGA65 switches to C64 mode; keys 1–9 on the MEGA65 pick the song."/></TextBlock>
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="BASIC text"/><Run Text=" – Types a BASIC listing saved as text (.bas/.txt) into the MEGA65, as if you typed it yourself."/></TextBlock>
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="ROM (temp)"/><Run Text=" – Starts the MEGA65 with a ROM file from this PC, to try it out. Your SD card is not changed; switching off brings back your normal ROM."/></TextBlock>
@@ -647,7 +651,7 @@
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Run hardware self-test"/><Run Text=" – Checks that connecting, typing, loading programs and the SD card all work. It leaves the machine as it found it."/></TextBlock>
                         <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Run unit tests"/><Run Text=" – For programmers: runs a test program that reports its results to the PC (the official m65 unit-test mode) and shows how many tests passed or failed. A log is saved in the reports folder."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="PRG autoload"/><Run Text=" – For programmers: choose a folder and press Watch, and every .prg you build there is sent to the MEGA65 and run straight away."/></TextBlock>
-                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Remote SD card"/><Run Text=" – Type mega65_ftp commands (dir, get, put…) for the card inside the MEGA65. The SD Card Browser does the same with buttons."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Remote SD card"/><Run Text=" – Type mega65_ftp commands (dir, get, put…) for the card inside the MEGA65. The SD Card Browser does the same with buttons. Save keeps everything shown below in a text file."/></TextBlock>
                     </StackPanel>
                 </Expander>
             </StackPanel>
@@ -714,6 +718,12 @@
                                         <TextBlock Text="&#xE722;" Style="{StaticResource Icon}"/>
                                     </Button>
                                 </UniformGrid>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="Without a reset" Style="{StaticResource Label}"/>
+                                    <Button Grid.Column="1" HorizontalAlignment="Stretch" Content="Go 64" Command="{Binding Go64NoResetCommand}" Margin="0,0,2,0" ToolTip="Switch to C64 mode as GO64 does, without restarting (USB/JTAG)"/>
+                                    <Button Grid.Column="2" HorizontalAlignment="Stretch" Content="Go 65" Command="{Binding Go65NoResetCommand}" Margin="2,0,0,0" ToolTip="Back to MEGA65 mode from C64 mode by typing SYS 58552 (USB/JTAG)"/>
+                                </Grid>
                                 <Border BorderThickness="1" BorderBrush="{DynamicResource ControlStrongStrokeColorDefaultBrush}" CornerRadius="6"
                                         Padding="10" AllowDrop="True" Background="{DynamicResource SubtleFillColorTransparentBrush}" v:DropTarget.Command="{Binding}">
                                     <Grid>
@@ -730,6 +740,24 @@
                                         <Button Grid.Column="2" Content="Choose…" Command="{Binding SendPrgCommand}" VerticalAlignment="Center"/>
                                     </Grid>
                                 </Border>
+                                <Expander Header="More options" Margin="0,6,0,0">
+                                    <StackPanel Margin="4,6,0,0">
+                                        <CheckBox Content="Reset first" IsChecked="{Binding ResetFirst}" ToolTip="Untick to load into the running machine (USB/JTAG). Over Ethernet the MEGA65 always restarts."/>
+                                        <CheckBox Content="Load to the address in the file (,8,1)" IsChecked="{Binding UseFileLoadAddress}" Margin="0,4,0,0"
+                                                  ToolTip="Load where the program says, instead of at the start of BASIC (USB/JTAG). Ethernet always does this."/>
+                                        <Grid Margin="0,6,0,0">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                            <TextBlock Text="Video" Style="{StaticResource Label}"/>
+                                            <ComboBox Grid.Column="1" ItemsSource="{Binding VideoChoices}" SelectedItem="{Binding VideoChoice}"/>
+                                        </Grid>
+                                        <Grid Margin="0,6,0,0">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                            <TextBlock Text="Mount D81" Style="{StaticResource Label}"/>
+                                            <TextBox Grid.Column="1" Text="{Binding MountD81Name, UpdateSourceTrigger=PropertyChanged}"
+                                                     ToolTip="Ethernet only: a .D81 in the card's root folder to mount as drive 8 with the program, e.g. GAME.D81"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Expander>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource Card}" IsEnabled="{Binding IsConnected}">
@@ -767,11 +795,68 @@
                                 </Grid>
                             </StackPanel>
                         </Border>
+                        <Border Style="{StaticResource Card}" IsEnabled="{Binding IsConnected}">
+                            <StackPanel>
+                                <TextBlock Text="Disk from this PC" Style="{StaticResource SectionTitle}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding VirtualD81Path, TargetNullValue='No disk image chosen'}" Style="{StaticResource Muted}" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" ToolTip="{Binding VirtualD81Path}"/>
+                                    <Button Grid.Column="1" Content="D81…" Command="{Binding ChooseVirtualD81Command}" Margin="6,0"
+                                            IsEnabled="{Binding IsServingDisk, Converter={StaticResource Not}}"/>
+                                    <Button Grid.Column="2" ToolTip="Use the disk image as drive 8 over the USB cable, until you press Stop">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                <Setter Property="Content" Value="Serve"/>
+                                                <Setter Property="Command" Value="{Binding ServeDiskCommand}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsServingDisk}" Value="True">
+                                                        <Setter Property="Content" Value="Stop"/>
+                                                        <Setter Property="Command" Value="{Binding StopServingDiskCommand}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </Grid>
+                                <TextBlock Style="{StaticResource Muted}" Margin="0,6,0,0" Visibility="{Binding IsServingDisk, Converter={StaticResource BoolToVisible}}"
+                                           Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                           Text="Drive 8 is this file now. Do not reset or switch off the MEGA65 until you press Stop."/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="BASIC editor" Style="{StaticResource SectionTitle}"/>
+                                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
+                                    <Button Content="Open…" Command="{Binding OpenBasicCommand}" Margin="0,0,6,0"/>
+                                    <Button Content="Save…" Command="{Binding SaveBasicCommand}" Margin="0,0,6,0"/>
+                                    <Button Content="Type into MEGA65" Command="{Binding TypeBasicTextCommand}" IsEnabled="{Binding IsConnected}"
+                                            ToolTip="Type the listing at the MEGA65's READY prompt (USB/JTAG)"/>
+                                </StackPanel>
+                                <TextBox Text="{Binding BasicText, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" AcceptsTab="False" Height="160"
+                                         FontFamily="Cascadia Mono, Consolas" FontSize="12" TextWrapping="NoWrap"
+                                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+                            </DockPanel>
+                        </Border>
                     </StackPanel>
                 </ScrollViewer>
                 <Border Grid.Column="2" Style="{StaticResource Card}" Margin="0">
                     <DockPanel>
-                        <TextBlock DockPanel.Dock="Top" Text="Remote SD card · mega65_ftp" Style="{StaticResource SectionTitle}"/>
+                        <!-- Last screenshot -->
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10" Visibility="{Binding ScreenshotPath, Converter={StaticResource NullToCollapsed}}">
+                            <DockPanel Margin="0,0,0,6">
+                                <Button DockPanel.Dock="Right" Content="Hide" Command="{Binding HideScreenshotCommand}"/>
+                                <Button DockPanel.Dock="Right" Content="Open" Command="{Binding OpenScreenshotCommand}" Margin="0,0,6,0" ToolTip="Open the PNG file"/>
+                                <TextBlock Text="Screenshot" Style="{StaticResource SectionTitle}" Margin="0"/>
+                            </DockPanel>
+                            <Image Source="{Binding ScreenshotPath, Converter={StaticResource PathToImage}, ConverterParameter=800}" MaxHeight="300" Stretch="Uniform" HorizontalAlignment="Left"
+                                   RenderOptions.BitmapScalingMode="NearestNeighbor" ToolTip="{Binding ScreenshotPath}"/>
+                        </StackPanel>
+                        <DockPanel DockPanel.Dock="Top">
+                            <Button DockPanel.Dock="Right" Content="Clear" Command="{Binding ClearOutputCommand}"/>
+                            <Button DockPanel.Dock="Right" Content="Save…" Command="{Binding SaveOutputCommand}" Margin="0,0,6,0" ToolTip="Save the output below to a text file"/>
+                            <TextBlock Text="Remote SD card · mega65_ftp" Style="{StaticResource SectionTitle}"/>
+                        </DockPanel>
                         <Grid DockPanel.Dock="Top" Margin="0,0,0,8" IsEnabled="{Binding IsConnected}">
                             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBox Text="{Binding SdCommand, UpdateSourceTrigger=PropertyChanged}" FontFamily="Cascadia Mono, Consolas" Margin="0,0,6,0"
@@ -892,10 +977,10 @@
                 <TextBlock Style="{StaticResource PageSubtitle}" Text="Work with D81 disk images, ROM files and core files on this PC. No MEGA65 connection is needed."/>
                 <Expander Header="How to use this page" Style="{StaticResource PageHelp}">
                     <StackPanel Margin="24,6,0,0" MaxWidth="900" HorizontalAlignment="Left">
-                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="D81 disk image"/><Run Text=' – A .D81 file is a virtual 3.5" floppy disk. Create one, put programs from your PC on it, or take files off it. Copy it to the SD card and mount it on the MEGA65 to use it like a real disk.'/></TextBlock>
-                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="ROM start-up settings"/><Run Text=" – The MEGA65 ROM remembers a few start-up choices: CPU speed, font and screen colours. Open a copy of your MEGA65.ROM, change them and save a new ROM file."/></TextBlock>
-                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="ROM patch (.rdf)"/><Run Text=" – Some ROM changes are shared as small patch files instead of whole ROMs. Choose the patch and your ROM, and a patched copy is saved. Your original ROM is never changed."/></TextBlock>
-                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Core file (.cor)"/><Run Text=" – Check that a core file is complete and undamaged before flashing it, or build a .cor from a .bit bitstream (for core developers)."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="D81 disk image"/><Run Text=' – A .D81 file is a virtual 3.5" floppy disk. Create one, put programs from your PC or from another D81 on it, or take files off it. Copy it to the SD card and mount it on the MEGA65, or use it straight from this PC with Disk from this PC on the Device page.'/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="ROM start-up settings"/><Run Text=" – The MEGA65 ROM remembers a few start-up choices: CPU speed, font and screen colours. Open a copy of your MEGA65.ROM, change them and save a new ROM file. Save settings keeps your choices, so you can load them onto the next ROM version."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="ROM patch (.rdf)"/><Run Text=" – Some ROM changes are shared as small patch files instead of whole ROMs. Choose the patch and your ROM, and a patched copy is saved. Your original ROM is never changed. You can also make a patch from an original and a changed ROM."/></TextBlock>
+                        <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Core file (.cor)"/><Run Text=" – Check that a core file is complete and undamaged before flashing it, or build a .cor from a .bit bitstream (for core developers). You can also save the .bit inside a .cor, or make an .mcs for Vivado."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Using the results"/><Run Text=" – Copy a new disk or ROM to the SD card with the SD Card Browser. To try a ROM without copying it, use ROM (temp) on the Device page."/></TextBlock>
                     </StackPanel>
                 </Expander>
@@ -909,6 +994,7 @@
                             <Button Content="Open…" Command="{Binding OpenDiskCommand}" Margin="0,0,6,6"/>
                             <Button Content="Save" Command="{Binding SaveDiskCommand}" IsEnabled="{Binding HasDisk}" Style="{DynamicResource AccentButtonStyle}" Margin="0,0,18,6"/>
                             <Button Content="Add files…" Command="{Binding AddFilesCommand}" IsEnabled="{Binding HasDisk}" Margin="0,0,6,6"/>
+                            <Button Content="Copy from D81…" Command="{Binding CopyFromDiskCommand}" IsEnabled="{Binding HasDisk}" Margin="0,0,6,6" ToolTip="Copy files from another disk image onto this one"/>
                             <Button Content="Extract…" Command="{Binding ExtractFilesCommand}" CommandParameter="{Binding SelectedItems, ElementName=DiskList}" IsEnabled="{Binding HasDisk}" Margin="0,0,6,6"/>
                             <Button Content="Rename" Command="{Binding RenameFileCommand}" CommandParameter="{Binding SelectedItems, ElementName=DiskList}" IsEnabled="{Binding HasDisk}" Margin="0,0,6,6"/>
                             <Button Content="Delete" Command="{Binding DeleteFilesCommand}" CommandParameter="{Binding SelectedItems, ElementName=DiskList}" IsEnabled="{Binding HasDisk}" Margin="0,0,6,6"/>
@@ -974,7 +1060,11 @@
                                     <ComboBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal"><Border Width="14" Height="14" CornerRadius="3" Background="{Binding Brush}" BorderBrush="#80808080" BorderThickness="1" Margin="0,0,8,0"/><TextBlock Text="{Binding Name}"/></StackPanel></DataTemplate></ComboBox.ItemTemplate>
                                 </ComboBox>
                                 
-                                <Button Grid.Row="8" Grid.Column="1" Content="Save as…" Style="{DynamicResource AccentButtonStyle}" Command="{Binding SaveRomCommand}" HorizontalAlignment="Left" Margin="0,6,0,0"/>
+                                <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal" Margin="0,6,0,0">
+                                    <Button Content="Save as…" Style="{DynamicResource AccentButtonStyle}" Command="{Binding SaveRomCommand}" Margin="0,0,6,0"/>
+                                    <Button Content="Save settings…" Command="{Binding SavePresetCommand}" Margin="0,0,6,0" ToolTip="Keep these choices in a small file to use on another ROM"/>
+                                    <Button Content="Load settings…" Command="{Binding LoadPresetCommand}" ToolTip="Use choices saved earlier"/>
+                                </StackPanel>
                             </Grid>
                         </Border>
                         <TextBlock Style="{StaticResource Muted}" Text="Your original ROM is never changed; the result is saved as a new file."/>
@@ -994,6 +1084,20 @@
                             <Button Grid.Row="1" Grid.Column="2" Content="Choose…" Command="{Binding ChoosePatchBaseCommand}" Margin="8,0,0,0"/>
                         </Grid>
                         <Button Content="Apply patch and save…" Style="{DynamicResource AccentButtonStyle}" Command="{Binding ApplyPatchCommand}" HorizontalAlignment="Left"/>
+                        <TextBlock Text="Make a patch" Style="{StaticResource SectionTitle}" Margin="0,24,0,4"/>
+                        <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,10"
+                                   Text="Share a ROM change without sharing the whole ROM: the patch holds only the differences, and only works on the exact original ROM. The original's file name is stored in the patch, so give it a clear name of up to 31 characters, such as 920395.ROM."/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                            <TextBlock Text="Original ROM" Style="{StaticResource Label}" Margin="0,0,10,6"/>
+                            <TextBlock Grid.Column="1" Text="{Binding PatchOriginalPath, TargetNullValue='none'}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,0,6"/>
+                            <Button Grid.Column="2" Content="Choose…" Command="{Binding ChoosePatchOriginalCommand}" Margin="8,0,0,6"/>
+                            <TextBlock Grid.Row="1" Text="Changed ROM" Style="{StaticResource Label}" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PatchChangedPath, TargetNullValue='none'}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                            <Button Grid.Row="1" Grid.Column="2" Content="Choose…" Command="{Binding ChoosePatchChangedCommand}" Margin="8,0,0,0"/>
+                        </Grid>
+                        <Button Content="Make patch and save…" Command="{Binding CreatePatchCommand}" HorizontalAlignment="Left"/>
                     </StackPanel>
                 </TabItem>
                 <TabItem Header="Core file (.cor)">
@@ -1024,6 +1128,18 @@
                             </Grid>
                         </Border>
                         <TextBlock Style="{StaticResource Muted}" Text="Building uses the official bit2core tool. Nothing is flashed: install the core on the MEGA65 with MEGAFLASH."/>
+                        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Other formats" Style="{StaticResource SectionTitle}"/>
+                                <WrapPanel>
+                                    <Button Content="Save the .bit inside a .cor…" Command="{Binding SaveBitFromCoreCommand}" Margin="0,0,6,6"
+                                            ToolTip="Take the FPGA bitstream out of a core file, to load it with Bitstream on the Device page"/>
+                                    <Button Content="Make .mcs for Vivado…" Command="{Binding MakeMcsCommand}" Margin="0,0,6,6"
+                                            ToolTip="Convert a .bit, or a .cor for a chosen flash slot, into an .mcs flash file (official bit2mcs)"/>
+                                </WrapPanel>
+                                <TextBlock Style="{StaticResource Muted}" Text=".mcs files are for flashing with Xilinx Vivado and a JTAG programmer, mainly on older boards (R2, R3). On an R4, R5 or R6, install the .cor with MEGAFLASH."/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </TabItem>
             </TabControl>

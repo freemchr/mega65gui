@@ -5,6 +5,10 @@ namespace Mega65Gui.Core.Device;
 
 public enum MachineMode { Mega65, C64 }
 
+/// <summary>How a PRG is sent. Pal: null keeps the current video mode. MountD81: a .D81 in the card's root (Ethernet only).</summary>
+public sealed record PrgOptions(bool Run = true, bool C64Mode = false, bool ResetFirst = true, bool UseFileLoadAddress = false,
+    bool? Pal = null, string? MountD81 = null);
+
 /// <summary>
 /// Device operations implemented by running the official tools. Argument lists follow the
 /// documented flags of m65, mega65_ftp and etherload. On Windows m65 cannot auto-detect the
@@ -36,12 +40,46 @@ public sealed class Mega65Commands(ToolInstallation tools, IProcessRunner runner
     };
 
     /// <summary>Loads (and optionally runs) a PRG. C64 mode is chosen when the program is a C64 one.</summary>
-    public static (string Tool, List<string> Args) SendPrgArgs(ConnectionTarget t, string prg, bool run, bool c64Mode) => t.Kind switch
+    public static (string Tool, List<string> Args) SendPrgArgs(ConnectionTarget t, string prg, bool run, bool c64Mode) =>
+        SendPrgArgs(t, prg, new PrgOptions(run, c64Mode));
+
+    /// <summary>
+    /// Loads a PRG with the chosen options. Over USB/JTAG: -F reset first, -4 C64 mode, -1 load
+    /// to the address in the file (as LOAD"…",8,1), -p/-n PAL/NTSC, -r run. Over Ethernet
+    /// etherload always resets into the chosen mode and always uses the file's address; it can
+    /// also mount a D81 from the card's root folder (-m).
+    /// </summary>
+    public static (string Tool, List<string> Args) SendPrgArgs(ConnectionTarget t, string prg, PrgOptions o)
     {
-        ConnectionKind.Serial => ("m65", [.. SerialArgs(t), "-F", .. (c64Mode ? new[] { "-4" } : []), .. (run ? new[] { "-r" } : []), prg]),
-        ConnectionKind.Ethernet => ("etherload", ["-i", t.Address, .. (c64Mode ? new[] { "-4" } : ["-5"]), .. (run ? new[] { "-r" } : []), prg]),
-        _ => throw new InvalidOperationException("Not connected."),
-    };
+        if (o.MountD81 is not null && t.Kind != ConnectionKind.Ethernet) throw new NotSupportedException("Mounting a disk image with the program is only available over Ethernet.");
+        string[] video = o.Pal is { } pal ? [t.Kind == ConnectionKind.Serial ? (pal ? "-p" : "-n") : (pal ? "--pal" : "--ntsc")] : [];
+        return t.Kind switch
+        {
+            ConnectionKind.Serial => ("m65", [.. SerialArgs(t), .. Flag(o.ResetFirst, "-F"), .. Flag(o.C64Mode, "-4"), .. Flag(o.UseFileLoadAddress, "-1"),
+                .. video, .. Flag(o.Run, "-r"), prg]),
+            ConnectionKind.Ethernet => ("etherload", ["-i", t.Address, o.C64Mode ? "-4" : "-5", .. video,
+                .. (o.MountD81 is { } m ? new[] { "-m", m } : []), .. Flag(o.Run, "-r"), prg]),
+            _ => throw new InvalidOperationException("Not connected."),
+        };
+    }
+
+    private static string[] Flag(bool on, string flag) => on ? [flag] : [];
+
+    /// <summary>
+    /// Serves a D81 image on this PC as the MEGA65's drive 8 ("m65 -d"): m65 stays running and
+    /// answers the MEGA65's disk requests over the USB cable until it is stopped. The MEGA65 is
+    /// not reset. Writes from the MEGA65 go straight into the file.
+    /// </summary>
+    public static (string Tool, List<string> Args) VirtualD81Args(ConnectionTarget t, string d81) => SerialOnly(t, "Serving a disk image from this PC", "-d", d81);
+
+    /// <summary>Monitor command that turns the MEGA65's disk virtualisation off again after m65 -d is stopped.</summary>
+    public const string VirtualD81Off = "sffd3659 00";
+
+    /// <summary>Switches to C64 mode without a reset (m65 -4 without -F types GO64 for you).</summary>
+    public static (string Tool, List<string> Args) Go64Args(ConnectionTarget t) => SerialOnly(t, "Going to C64 mode without a reset", "-4");
+
+    /// <summary>Typed in C64 mode, returns to MEGA65 mode without a reset.</summary>
+    public const string Go65Command = "sys58552";
 
     private static (string Tool, List<string> Args) SerialOnly(ConnectionTarget t, string what, params string[] args) =>
         t.Kind == ConnectionKind.Serial ? ("m65", [.. SerialArgs(t), .. args]) : throw new NotSupportedException($"{what} is only available over USB/JTAG.");
@@ -130,6 +168,13 @@ public sealed class Mega65Commands(ToolInstallation tools, IProcessRunner runner
     public Task<ProcessResult> ResetAsync(ConnectionTarget t, CancellationToken ct = default) => Run(ResetArgs(t), Short, ct);
     public Task<ProcessResult> SetModeAsync(ConnectionTarget t, MachineMode m, CancellationToken ct = default) => Run(ModeArgs(t, m), Short, ct);
     public Task<ProcessResult> SendPrgAsync(ConnectionTarget t, string prg, bool run, bool c64, CancellationToken ct = default) => Run(SendPrgArgs(t, prg, run, c64), Long, ct);
+    public Task<ProcessResult> SendPrgAsync(ConnectionTarget t, string prg, PrgOptions options, CancellationToken ct = default) => Run(SendPrgArgs(t, prg, options), Long, ct);
+    public Task<ProcessResult> Go64Async(ConnectionTarget t, CancellationToken ct = default) => Run(Go64Args(t), Short, ct);
+    public Task<ProcessResult> Go65Async(ConnectionTarget t, CancellationToken ct = default) => TypeBasicAsync(t, Go65Command, ct);
+
+    /// <summary>Runs m65 -d until <paramref name="stop"/> is cancelled (then m65 is ended and OperationCanceledException thrown).</summary>
+    public Task<ProcessResult> ServeD81Async(ConnectionTarget t, string d81, IProgress<string>? output, CancellationToken stop) =>
+        Run(VirtualD81Args(t, d81), TimeSpan.FromHours(24), stop, output);
     public Task<ProcessResult> ScreenshotAsync(ConnectionTarget t, string png, CancellationToken ct = default) => Run(ScreenshotArgs(t, png), Short, ct);
     public Task<ProcessResult> SendSidAsync(ConnectionTarget t, string sid, CancellationToken ct = default) => Run(SendSidArgs(t, sid), Long, ct);
     public Task<ProcessResult> LoadBitstreamAsync(ConnectionTarget t, string bit, CancellationToken ct = default, IProgress<string>? output = null) => Run(LoadBitstreamArgs(t, bit), Long, ct, output);
@@ -158,6 +203,18 @@ public sealed class Mega65Commands(ToolInstallation tools, IProcessRunner runner
 
     public Task<ProcessResult> RunUnitTestAsync(ConnectionTarget t, string prg, int timeoutSeconds, string logFile, IProgress<string>? output = null, CancellationToken ct = default) =>
         Run(UnitTestArgs(t, prg, timeoutSeconds, logFile), TimeSpan.FromSeconds(Math.Max(10, timeoutSeconds) + 60), ct, output);
+
+    /// <summary>
+    /// Makes an .mcs flash file (for Vivado) with the official bit2mcs: from a .bit, or from a .cor
+    /// placed at a flash slot (slot n starts at n × $800000).
+    /// </summary>
+    public static (string Tool, List<string> Args) Bit2McsArgs(string input, string output, int? slot) =>
+        slot is { } n
+            ? n is >= 0 and <= 7 ? ("bit2mcs", [input, output, (n * 0x800000).ToString("X", System.Globalization.CultureInfo.InvariantCulture)]) : throw new ArgumentOutOfRangeException(nameof(slot))
+            : ("bit2mcs", [input, output]);
+
+    public Task<ProcessResult> BuildMcsAsync(string input, string output, int? slot, CancellationToken ct = default) =>
+        Run(Bit2McsArgs(input, output, slot), TimeSpan.FromMinutes(2), ct);
 
     /// <summary>Builds a .cor core file from a .bit bitstream with the official bit2core tool.</summary>
     public Task<ProcessResult> BuildCoreAsync(string target, string bitPath, string name, string version, string outPath, CancellationToken ct = default) =>

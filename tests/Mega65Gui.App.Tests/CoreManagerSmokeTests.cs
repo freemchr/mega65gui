@@ -117,7 +117,9 @@ public class CoreManagerSmokeTests
         var browser = new CardBrowserViewModel(services);
         var device = new DeviceViewModel(services);
         var about = new AboutViewModel(services);
-        foreach (var (page, name) in new PageViewModel[] { update, browser, device, about }.Select(p => (p, p.Title.Replace(' ', '-'))))
+        var terminal = new TerminalViewModel(services) { KeyboardActive = true }; // shows the on-screen MEGA65 keys
+        var tools = new ToolsPageViewModel(services);
+        foreach (var (page, name) in new PageViewModel[] { update, browser, device, about, terminal, tools }.Select(p => (p, p.Title.Replace(' ', '-').Replace("&", "and"))))
         {
             window.Content = new System.Windows.Controls.ContentControl { Content = page, Margin = new Thickness(16) };
             Pump(page.OnShownAsync());

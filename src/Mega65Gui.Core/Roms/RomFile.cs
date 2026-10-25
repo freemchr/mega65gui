@@ -65,6 +65,20 @@ public sealed record RomSettings(byte Speed, byte Font, byte Foreground, byte Bo
         return copy;
     }
 
+    /// <summary>Saves the settings on their own (a preset to apply to other ROMs later).</summary>
+    public string ToPreset() => System.Text.Json.JsonSerializer.Serialize(this, PresetJson);
+
+    public static RomSettings FromPreset(string json)
+    {
+        var s = System.Text.Json.JsonSerializer.Deserialize<RomSettings>(json, PresetJson) ?? throw new InvalidDataException("This is not a ROM settings file.");
+        if (!Speeds.Any(x => x.Value == s.Speed) || !Fonts.Any(x => x.Value == s.Font)
+            || new[] { s.Foreground, s.ErrorMessage, s.Remark, s.Keyword }.Any(c => c > 15) || s.Border >= Palette.Count || s.Background >= Palette.Count)
+            throw new InvalidDataException("This ROM settings file has values the ROM does not accept.");
+        return s;
+    }
+
+    private static readonly System.Text.Json.JsonSerializerOptions PresetJson = new() { WriteIndented = true };
+
     private static void Check(byte[] rom)
     {
         if (rom.Length != RomFile.Size) throw new InvalidDataException($"Not a MEGA65 ROM: {rom.Length:N0} bytes (expected 131,072).");
@@ -87,6 +101,28 @@ public sealed class RomPatcher(IProcessRunner runner)
     public static string? TargetName(byte[] patch) =>
         patch.Length > 256 && System.Text.Encoding.ASCII.GetString(patch, 0, 16) == Magic
             ? System.Text.Encoding.ASCII.GetString(patch, 96, 160).TrimEnd('\0') : null;
+
+    /// <summary>
+    /// Makes a .rdf patch that turns <paramref name="referenceRom"/> into <paramref name="newRom"/>
+    /// ("romdiff reference new out"). The patch stores both file names, upper-cased, so the
+    /// reference name must be 31 characters or fewer. This can take a few minutes.
+    /// </summary>
+    public async Task<ProcessResult> CreateAsync(string romdiffExe, string referenceRom, string newRom, string outputPath, CancellationToken ct = default)
+    {
+        if (Path.GetFileName(referenceRom).Length > 31) throw new InvalidDataException("The original ROM's file name must be 31 characters or fewer (romdiff stores it in the patch). Rename a copy, for example to MEGA65.ROM.");
+        if (Path.GetFileName(newRom).Length > 159) throw new InvalidDataException("The changed ROM's file name is too long for a patch.");
+        foreach (var rom in new[] { referenceRom, newRom })
+            if (new FileInfo(rom).Length < RomFile.Size) throw new InvalidDataException($"{Path.GetFileName(rom)} is smaller than a 128 KB MEGA65 ROM.");
+        var r = await runner.RunAsync(romdiffExe, [referenceRom, newRom, outputPath], TimeSpan.FromMinutes(15), null, ct);
+        return r.Succeeded && !File.Exists(outputPath) ? r with { ExitCode = -1 } : r;
+    }
+
+    /// <summary>romdiff's error lines; it also prints megabytes of progress, which are left out.</summary>
+    public static string Problem(ProcessResult r)
+    {
+        var errors = (r.StdErr + "\n" + r.StdOut).Split('\n', '\r').Select(l => l.Trim()).Where(l => l.StartsWith("ERROR", StringComparison.Ordinal)).Distinct().ToList();
+        return errors.Count > 0 ? string.Join(" ", errors) : $"exit code {r.ExitCode}";
+    }
 
     public async Task<ProcessResult> ApplyAsync(string romdiffExe, string patchPath, string baseRomPath, string outputPath, CancellationToken ct = default)
     {

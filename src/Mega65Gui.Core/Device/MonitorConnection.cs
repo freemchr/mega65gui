@@ -3,7 +3,11 @@ using System.Text;
 
 namespace Mega65Gui.Core.Device;
 
-public enum SpecialKey { Return, InstDel, Left, Right, Up, Down, Home, Clr, RunStop, Space, F1, F2, F3, F4, F5, F6, F7, F8 }
+public enum SpecialKey
+{
+    Return, InstDel, Left, Right, Up, Down, Home, Clr, RunStop, Space, F1, F2, F3, F4, F5, F6, F7, F8,
+    F9, F10, F11, F12, F13, F14, Escape, Tab, Help, NoScroll, Alt, Ctrl, Mega, UpArrow, LeftArrow,
+}
 
 /// <summary>
 /// MEGA65 keyboard-matrix positions for the virtual keyboard register ($FFD3615). These are
@@ -11,7 +15,7 @@ public enum SpecialKey { Return, InstDel, Left, Right, Up, Down, Home, Clr, RunS
 /// </summary>
 public static class KeyMatrix
 {
-    public const byte None = 0x7F, LeftShift = 0x0F;
+    public const byte None = 0x7F, LeftShift = 0x0F, Ctrl = 0x3A, Mega = 0x3D, Alt = 0x42;
 
     private static readonly Dictionary<char, byte> Plain = new()
     {
@@ -21,13 +25,14 @@ public static class KeyMatrix
         ['9'] = 0x20, ['i'] = 0x21, ['j'] = 0x22, ['0'] = 0x23, ['m'] = 0x24, ['k'] = 0x25, ['o'] = 0x26, ['n'] = 0x27,
         ['+'] = 0x28, ['p'] = 0x29, ['l'] = 0x2A, ['-'] = 0x2B, ['.'] = 0x2C, [':'] = 0x2D, ['@'] = 0x2E, [','] = 0x2F,
         ['£'] = 0x30, ['*'] = 0x31, [';'] = 0x32, ['='] = 0x35, ['/'] = 0x37, ['1'] = 0x38, ['_'] = 0x39, ['2'] = 0x3B,
-        [' '] = 0x3C, ['q'] = 0x3E,
+        [' '] = 0x3C, ['q'] = 0x3E, ['^'] = 0x36,
     };
 
     /// <summary>Characters typed with left shift on another key.</summary>
     private static readonly Dictionary<char, char> Shifted = new()
     {
         ['!'] = '1', ['"'] = '2', ['#'] = '3', ['$'] = '4', ['%'] = '5', ['('] = '8', [')'] = '9', ['?'] = '/', ['<'] = ',', ['>'] = '.',
+        ['&'] = '6', ['\''] = '7', ['['] = ':', [']'] = ';',
     };
 
     /// <summary>Matrix code and modifier for a typed character, or null if the MEGA65 has no such key.</summary>
@@ -55,8 +60,24 @@ public static class KeyMatrix
         SpecialKey.F3 => (0x05, None), SpecialKey.F4 => (0x05, LeftShift),
         SpecialKey.F5 => (0x06, None), SpecialKey.F6 => (0x06, LeftShift),
         SpecialKey.F7 => (0x03, None), SpecialKey.F8 => (0x03, LeftShift),
+        // The MEGA65's extra keys (matrix positions 64–71, after the C64's 0–63).
+        SpecialKey.NoScroll => (0x40, None),
+        SpecialKey.Tab => (0x41, None),
+        SpecialKey.Alt => (Alt, None),
+        SpecialKey.Help => (0x43, None),
+        SpecialKey.F9 => (0x44, None), SpecialKey.F10 => (0x44, LeftShift),
+        SpecialKey.F11 => (0x45, None), SpecialKey.F12 => (0x45, LeftShift),
+        SpecialKey.F13 => (0x46, None), SpecialKey.F14 => (0x46, LeftShift),
+        SpecialKey.Escape => (0x47, None),
+        SpecialKey.Ctrl => (Ctrl, None),
+        SpecialKey.Mega => (Mega, None),
+        SpecialKey.UpArrow => (0x36, None),
+        SpecialKey.LeftArrow => (0x39, None),
         _ => throw new ArgumentOutOfRangeException(nameof(key)),
     };
+
+    /// <summary>The key with CTRL, MEGA or ALT held instead of its usual modifier (one modifier at a time).</summary>
+    public static (byte Key, byte Modifier) With((byte Key, byte Modifier) key, byte modifier) => (key.Key, modifier);
 
     /// <summary>
     /// Monitor commands to press and release a key. With a modifier, the modifier is pressed on its

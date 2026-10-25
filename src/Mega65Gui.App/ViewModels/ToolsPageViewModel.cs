@@ -122,6 +122,32 @@ public sealed partial class ToolsPageViewModel(AppServices services) : PageViewM
         ShowDisk();
     }
 
+    /// <summary>Copies chosen files from another D81 image onto this one.</summary>
+    [RelayCommand]
+    private void CopyFromDisk()
+    {
+        if (_disk is null) return;
+        var dlg = new OpenFileDialog { Title = "Copy files from another disk image", Filter = "D81 disk images (*.d81)|*.d81" };
+        if (dlg.ShowDialog() != true) return;
+        D81Image other;
+        try { other = D81Image.Load(File.ReadAllBytes(dlg.FileName)); }
+        catch (Exception e) when (e is IOException or InvalidDataException) { Status = $"Cannot open: {e.Message}"; return; }
+        var files = other.Entries.Where(e => e.Closed && e.Type is CbmFileType.Prg or CbmFileType.Seq or CbmFileType.Usr).ToList();
+        if (files.Count == 0) { Status = $"{Path.GetFileName(dlg.FileName)} has no PRG, SEQ or USR files to copy."; return; }
+        var picked = PickItemsWindow.Ask("Copy files", $"Files on {Path.GetFileName(dlg.FileName)} ({other.DiskName}). Choose the ones to copy onto {(_disk.DiskName.Length > 0 ? _disk.DiskName : "this disk")}:",
+            files.Select(e => $"{e.Blocks,5}  {e.Name,-16}  {e.TypeName}").ToList(), "Copy");
+        var copied = 0;
+        var problems = new List<string>();
+        foreach (var e in picked.Select(i => files[i]))
+        {
+            try { _disk.Add(e.Name, other.Extract(e), e.Type); copied++; }
+            catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or InvalidDataException) { problems.Add($"{e.Name}: {ex.Message}"); }
+        }
+        if (copied > 0) { DiskDirty = true; ShowDisk(); }
+        if (picked.Count > 0)
+            Status = (copied > 0 ? $"Copied {copied} file(s). Save to keep them." : "Nothing was copied.") + (problems.Count > 0 ? " " + string.Join(" ", problems) : "");
+    }
+
     [RelayCommand]
     private void ExtractFiles(IList? selected)
     {
@@ -201,10 +227,7 @@ public sealed partial class ToolsPageViewModel(AppServices services) : PageViewM
             var s = RomSettings.Read(rom);
             _rom = rom;
             RomPath = dlg.FileName;
-            Speed = Speeds.FirstOrDefault(x => x.Value == s.Speed, Speeds[2]);
-            Font = Fonts.FirstOrDefault(x => x.Value == s.Font, Fonts[0]);
-            Foreground = Pick(TextColours, s.Foreground); Border = Pick(AreaColours, s.Border); Background = Pick(AreaColours, s.Background);
-            ErrorColour = Pick(TextColours, s.ErrorMessage); RemarkColour = Pick(TextColours, s.Remark); KeywordColour = Pick(TextColours, s.Keyword);
+            Show(s);
             RomInfo = $"{Path.GetFileName(dlg.FileName)} · ROM {RomFile.ReadVersion(rom)}";
             HasRom = true;
             Status = "";
@@ -214,15 +237,55 @@ public sealed partial class ToolsPageViewModel(AppServices services) : PageViewM
 
     private static PaletteChoice Pick(IReadOnlyList<PaletteChoice> list, byte index) => list.FirstOrDefault(c => c.Index == index) ?? list[0];
 
+    private RomSettings CurrentSettings() => new(Speed!.Value, Font!.Value, Foreground!.Index, Border!.Index, Background!.Index,
+        ErrorColour!.Index, RemarkColour!.Index, KeywordColour!.Index);
+
+    private void Show(RomSettings s)
+    {
+        Speed = Speeds.FirstOrDefault(x => x.Value == s.Speed, Speeds[2]);
+        Font = Fonts.FirstOrDefault(x => x.Value == s.Font, Fonts[0]);
+        Foreground = Pick(TextColours, s.Foreground); Border = Pick(AreaColours, s.Border); Background = Pick(AreaColours, s.Background);
+        ErrorColour = Pick(TextColours, s.ErrorMessage); RemarkColour = Pick(TextColours, s.Remark); KeywordColour = Pick(TextColours, s.Keyword);
+    }
+
+    private const string PresetFilter = "MEGA65 ROM settings (*.m65rom.json)|*.m65rom.json|JSON files (*.json)|*.json";
+
+    /// <summary>Keeps the chosen settings in a small file, to apply to another ROM (such as a newer version) later.</summary>
+    [RelayCommand]
+    private void SavePreset()
+    {
+        if (!HasRom) return;
+        var dlg = new SaveFileDialog { Title = "Save these settings", Filter = PresetFilter, FileName = "my settings.m65rom.json" };
+        if (dlg.ShowDialog() != true) return;
+        try
+        {
+            File.WriteAllText(dlg.FileName, CurrentSettings().ToPreset());
+            Status = $"Saved the settings to {dlg.FileName}. Open another ROM and load them to use them again.";
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Status = $"Cannot save: {e.Message}"; }
+    }
+
+    [RelayCommand]
+    private void LoadPreset()
+    {
+        if (!HasRom) return;
+        var dlg = new OpenFileDialog { Title = "Load saved settings", Filter = PresetFilter };
+        if (dlg.ShowDialog() != true) return;
+        try
+        {
+            Show(RomSettings.FromPreset(File.ReadAllText(dlg.FileName)));
+            Status = $"Loaded {Path.GetFileName(dlg.FileName)}. Save as… writes a ROM with these settings.";
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException) { Status = $"Cannot use that file: {e.Message}"; }
+    }
+
     [RelayCommand]
     private void SaveRom()
     {
         if (_rom is null || RomPath is null) return;
         var dlg = new SaveFileDialog { Filter = "MEGA65 ROMs (*.rom)|*.rom", FileName = "MEGA65.ROM", InitialDirectory = Path.GetDirectoryName(RomPath) };
         if (dlg.ShowDialog() != true) return;
-        var settings = new RomSettings(Speed!.Value, Font!.Value, Foreground!.Index, Border!.Index, Background!.Index,
-            ErrorColour!.Index, RemarkColour!.Index, KeywordColour!.Index);
-        File.WriteAllBytes(dlg.FileName, settings.ApplyTo(_rom));
+        File.WriteAllBytes(dlg.FileName, CurrentSettings().ApplyTo(_rom));
         Status = $"Saved {dlg.FileName}. Copy it to the card as MEGA65.ROM (or MEGA65x.ROM) to use it.";
     }
 
@@ -261,8 +324,40 @@ public sealed partial class ToolsPageViewModel(AppServices services) : PageViewM
         var r = await new RomPatcher(services.Runner).ApplyAsync(romdiff, PatchPath, PatchBasePath, dlg.FileName);
         Status = r.Succeeded
             ? $"Patched ROM saved as {dlg.FileName} (version {RomFile.ReadVersion(File.ReadAllBytes(dlg.FileName)) ?? "unknown"})."
-            : $"romdiff failed: {(r.StdErr + r.StdOut).Trim()}";
+            : $"romdiff failed: {RomPatcher.Problem(r)}";
     }, "Applying patch…");
+
+    // Making a patch: the original ROM and the changed one.
+    [ObservableProperty] private string? _patchOriginalPath;
+    [ObservableProperty] private string? _patchChangedPath;
+
+    [RelayCommand]
+    private void ChoosePatchOriginal()
+    {
+        var dlg = new OpenFileDialog { Title = "The original ROM (the patch will need this exact file)", Filter = "MEGA65 ROMs (*.rom;*.bin)|*.rom;*.bin" };
+        if (dlg.ShowDialog() == true) PatchOriginalPath = dlg.FileName;
+    }
+
+    [RelayCommand]
+    private void ChoosePatchChanged()
+    {
+        var dlg = new OpenFileDialog { Title = "The changed ROM", Filter = "MEGA65 ROMs (*.rom;*.bin)|*.rom;*.bin" };
+        if (dlg.ShowDialog() == true) PatchChangedPath = dlg.FileName;
+    }
+
+    [RelayCommand]
+    private Task CreatePatchAsync() => GuardAsync(async () =>
+    {
+        if (PatchOriginalPath is null || PatchChangedPath is null) { Status = "Choose the original ROM and the changed ROM."; return; }
+        var romdiff = services.Tools.Current?.PathOf("romdiff") ?? throw new InvalidOperationException("romdiff is part of the device tools; install them first.");
+        var dlg = new SaveFileDialog { Filter = "MEGA65 ROM patches (*.rdf)|*.rdf", FileName = Path.GetFileNameWithoutExtension(PatchChangedPath) + ".rdf" };
+        if (dlg.ShowDialog() != true) return;
+        Status = "Making the patch (romdiff compares the whole ROM, so this can take a few minutes)…";
+        var r = await new RomPatcher(services.Runner).CreateAsync(romdiff, PatchOriginalPath, PatchChangedPath, dlg.FileName);
+        Status = r.Succeeded
+            ? $"Patch saved as {dlg.FileName} ({new FileInfo(dlg.FileName).Length:N0} bytes). Anyone with {Path.GetFileName(PatchOriginalPath).ToUpperInvariant()} can apply it."
+            : $"romdiff failed: {RomPatcher.Problem(r)}";
+    }, "Making the patch…");
 
     // ================= Core files (.cor) =================
 
@@ -300,6 +395,45 @@ public sealed partial class ToolsPageViewModel(AppServices services) : PageViewM
                     : "Check: FAILED – the size in the header does not match the file. Do not flash it.");
         Status = info.IsValid ? "The core file is valid." : "The core file failed its check.";
     }, "Checking the core file…");
+
+    /// <summary>Saves the FPGA bitstream stored inside a .cor, to load it over JTAG with Bitstream on the Device page.</summary>
+    [RelayCommand]
+    private void SaveBitFromCore()
+    {
+        var open = new OpenFileDialog { Title = "Core file to take the bitstream from", Filter = "MEGA65 core files (*.cor)|*.cor" };
+        if (open.ShowDialog() != true) return;
+        try
+        {
+            var bit = CoreFile.ExtractBitstream(File.ReadAllBytes(open.FileName));
+            var save = new SaveFileDialog { Filter = "FPGA bitstreams (*.bit)|*.bit", FileName = Path.GetFileNameWithoutExtension(open.FileName) + ".bit" };
+            if (save.ShowDialog() != true) return;
+            File.WriteAllBytes(save.FileName, bit);
+            Status = $"Saved {save.FileName}. Load it on the Device page with Bitstream (until power-off).";
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException) { Status = $"Cannot read that core: {e.Message}"; }
+    }
+
+    /// <summary>Makes an .mcs flash file for Vivado with the official bit2mcs: from a .bit, or a .cor placed at a slot.</summary>
+    [RelayCommand]
+    private Task MakeMcsAsync() => GuardAsync(async () =>
+    {
+        var commands = services.Commands ?? throw new InvalidOperationException("Making an .mcs uses bit2mcs from the device tools; install them first.");
+        var open = new OpenFileDialog { Title = "Bitstream or core to convert", Filter = "Bitstreams and cores (*.bit;*.cor)|*.bit;*.cor" };
+        if (open.ShowDialog() != true) return;
+        int? slot = null;
+        if (open.FileName.EndsWith(".cor", StringComparison.OrdinalIgnoreCase))
+        {
+            if (InputDialog.Ask("Flash slot", "Which flash slot is the core for (0–7)? Slot 0 is the factory core.", "1") is not { } answer) return;
+            if (!int.TryParse(answer, out var n) || n is < 0 or > 7) { Status = "The slot must be a number from 0 to 7."; return; }
+            slot = n;
+        }
+        var save = new SaveFileDialog { Filter = "Flash files (*.mcs)|*.mcs", FileName = Path.GetFileNameWithoutExtension(open.FileName) + (slot is { } s ? $"-slot{s}" : "") + ".mcs" };
+        if (save.ShowDialog() != true) return;
+        var r = await commands.BuildMcsAsync(open.FileName, save.FileName, slot);
+        Status = r.Succeeded && File.Exists(save.FileName)
+            ? $"Saved {save.FileName}. It is for flashing with Xilinx Vivado and a JTAG programmer; on an R4–R6 use MEGAFLASH with the .cor instead."
+            : "bit2mcs failed: " + (r.StdOut + r.StdErr).Trim();
+    }, "Making the .mcs file…");
 
     [RelayCommand]
     private void ChooseCoreBit()

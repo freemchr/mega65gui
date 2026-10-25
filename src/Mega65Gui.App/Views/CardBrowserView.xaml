@@ -5,15 +5,19 @@
         <StackPanel DockPanel.Dock="Top">
             <TextBlock Text="SD Card Browser" Style="{StaticResource PageTitle}"/>
             <TextBlock Style="{StaticResource PageSubtitle}"
-                       Text="Your PC on the left, the SD card inside the MEGA65 on the right. Drag files between them, or from Windows Explorer onto the card."/>
+                       Text="Your PC on the left, the SD card inside the MEGA65 on the right. Drag files and folders between them, or from Windows Explorer onto the card."/>
             <Expander Header="How to use this page" Style="{StaticResource PageHelp}">
                 <StackPanel Margin="24,6,0,0" MaxWidth="900" HorizontalAlignment="Left">
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="What it does"/><Run Text=" – Copies files between this PC (left) and the SD card inside the MEGA65 (right) over the USB cable, without taking the card out. For a card in this PC's card reader, use SD Card Sync or File Explorer."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Open card"/><Run Text=" – Loads a small helper program into the MEGA65. Anything unsaved in its memory is lost, and the MEGA65 resets when you close the card."/></TextBlock>
-                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Arrows"/><Run Text=" – → copies the selected PC files onto the card; ← copies the selected card files to the PC folder. You can also drag files, including from Windows Explorer."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Arrows"/><Run Text=" – → copies the selected PC files and folders onto the card; ← copies the selected card files and folders to the PC folder. You can also drag them, including from Windows Explorer. Folders are copied with everything inside them."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Files already there"/><Run Text=" – You choose for each one: Replace, Skip, or Replace all / Skip all for the rest of the copy. Stop finishes the file being copied, then stops."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Name check"/><Run Text=" – Before copying to the card, names that BASIC cannot load (a leading $, commas, colons, quotes), empty files and disk images that are not 819,200 bytes are pointed out. Capital names writes names in capitals, as the MEGA65's directory shows them."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Card reader"/><Run Text=" – Pick an SD card in this PC's card reader as the left side, and Eject it safely when you are done."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="New folder, Rename, Delete"/><Run Text=" – Change the files on the card. Delete always asks first."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Mount D81"/><Run Text=" – Inserts the selected .D81 disk image into the MEGA65's virtual floppy drive."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Info"/><Run Text=" – Shows a file's size and where it is stored on the card."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Card space"/><Run Text=" – Counts the free space on the card and lists its MEGA65 ROMs. Counting reads the whole card, so it takes a while on large cards."/></TextBlock>
                 </StackPanel>
             </Expander>
         </StackPanel>
@@ -42,7 +46,21 @@
             </StackPanel>
         </Border>
 
-        <Grid>
+        <!-- Copy in progress -->
+        <Border DockPanel.Dock="Top" Style="{StaticResource Card}" Margin="0,0,0,8" Padding="12,8"
+                Visibility="{Binding IsTransferring, Converter={StaticResource BoolToVisible}}">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding TransferText}" TextTrimming="CharacterEllipsis" Margin="0,0,0,4"/>
+                    <ProgressBar Value="{Binding TransferPercent}" Maximum="100" Height="6"/>
+                </StackPanel>
+                <Button Grid.Column="1" Content="Stop" Command="{Binding StopTransferCommand}" Margin="12,0,0,0" ToolTip="Stop after the file being copied"/>
+            </Grid>
+        </Border>
+
+        <!-- Disabled during a copy: a folder change in the middle would send files to the wrong place. -->
+        <Grid IsEnabled="{Binding IsTransferring, Converter={StaticResource Not}}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition/>
             </Grid.ColumnDefinitions>
@@ -57,6 +75,14 @@
                         <Button Grid.Column="2" Command="{Binding LocalUpCommand}" ToolTip="Up one folder" Margin="6,0,0,0"><TextBlock Text="&#xE74A;" Style="{StaticResource Icon}" FontSize="12"/></Button>
                         <Button Grid.Column="3" Command="{Binding LocalRefreshCommand}" ToolTip="Refresh" Margin="4,0,0,0"><TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12"/></Button>
                         <Button Grid.Column="4" Command="{Binding BrowseLocalCommand}" ToolTip="Choose folder" Margin="4,0,0,0"><TextBlock Text="&#xE8DA;" Style="{StaticResource Icon}" FontSize="12"/></Button>
+                    </Grid>
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="Card reader:" VerticalAlignment="Center" Margin="2,0,8,0" Style="{StaticResource Muted}"/>
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding Drives}" SelectedItem="{Binding SelectedDrive}" ToolTip="An SD card in this PC's card reader"/>
+                        <Button Grid.Column="2" Command="{Binding RefreshDrivesCommand}" ToolTip="Look for card readers again" Margin="4,0,0,0"><TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12"/></Button>
+                        <Button Grid.Column="3" Content="Eject" Command="{Binding EjectLocalCommand}" Margin="4,0,0,0" ToolTip="Safely eject the card in this PC's reader"
+                                IsEnabled="{Binding LocalIsRemovable}"/>
                     </Grid>
                     <ListView x:Name="LocalList" ItemsSource="{Binding LocalItems}" SelectionMode="Extended" BorderThickness="0" Background="Transparent"
                               ItemContainerStyle="{StaticResource CompactRow}" AllowDrop="True"
@@ -89,10 +115,10 @@
 
             <!-- ======== transfer buttons ======== -->
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0">
-                <Button Command="{Binding UploadCommand}" CommandParameter="{Binding SelectedItems, ElementName=LocalList}" ToolTip="Upload the selected PC files to the card" Margin="0,0,0,8" Style="{DynamicResource AccentButtonStyle}">
+                <Button Command="{Binding UploadCommand}" CommandParameter="{Binding SelectedItems, ElementName=LocalList}" ToolTip="Copy the selected PC files and folders to the card" Margin="0,0,0,8" Style="{DynamicResource AccentButtonStyle}">
                     <TextBlock Text="&#xE72A;" Style="{StaticResource Icon}"/>
                 </Button>
-                <Button Command="{Binding DownloadSelectedCommand}" CommandParameter="{Binding SelectedItems, ElementName=RemoteList}" ToolTip="Download the selected card files to the PC folder">
+                <Button Command="{Binding DownloadSelectedCommand}" CommandParameter="{Binding SelectedItems, ElementName=RemoteList}" ToolTip="Copy the selected card files and folders to the PC folder">
                     <TextBlock Text="&#xE72B;" Style="{StaticResource Icon}"/>
                 </Button>
             </StackPanel>
@@ -104,7 +130,7 @@
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Text="&#xE88E;" Style="{StaticResource Icon}" Margin="2,0,8,0" ToolTip="SD card in the MEGA65"/>
                         <TextBlock Grid.Column="1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
-                            <Run Text="MEGA65:"/> <Run Text="{Binding RemotePath}"/>
+                            <Run Text="MEGA65:"/> <Run Text="{Binding RemotePath}"/><Run Text="  "/><Run Text="{Binding CardSpace}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                         </TextBlock>
                         <Button Grid.Column="2" Command="{Binding RemoteUpCommand}" ToolTip="Up one folder" Margin="6,0,0,0" IsEnabled="{Binding IsOpen}"><TextBlock Text="&#xE74A;" Style="{StaticResource Icon}" FontSize="12"/></Button>
                         <Button Grid.Column="3" Command="{Binding RemoteRefreshCommand}" ToolTip="Refresh" Margin="4,0,0,0" IsEnabled="{Binding IsOpen}"><TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12"/></Button>
@@ -116,6 +142,8 @@
                         <Button Content="Delete" Command="{Binding DeleteCommand}" CommandParameter="{Binding SelectedItems, ElementName=RemoteList}" Margin="0,0,4,4"/>
                         <Button Content="Mount D81" Command="{Binding MountCommand}" CommandParameter="{Binding SelectedItems, ElementName=RemoteList}" Margin="0,0,4,4" ToolTip="Mount the selected disk image as drive 8"/>
                         <Button Content="Info" Command="{Binding InfoCommand}" CommandParameter="{Binding SelectedItems, ElementName=RemoteList}" Margin="0,0,4,4" ToolTip="Show where the file is stored on the card (fragmentation)"/>
+                        <Button Content="Card space" Command="{Binding CardInfoCommand}" Margin="0,0,12,4" ToolTip="Count the free space and list the ROMs on the card (slow on large cards)"/>
+                        <CheckBox Content="Capital names" IsChecked="{Binding UpperCaseNames}" Margin="0,0,4,4" ToolTip="Write file and folder names to the card in capitals"/>
                     </WrapPanel>
                     <Grid>
                         <ListView x:Name="RemoteList" ItemsSource="{Binding RemoteItems}" SelectionMode="Extended" BorderThickness="0" Background="Transparent"

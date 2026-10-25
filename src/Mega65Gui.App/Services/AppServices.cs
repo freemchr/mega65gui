@@ -113,8 +113,91 @@ public sealed class AppServices
     /// <summary>Frees the serial port: closes the terminal and the card browser session.</summary>
     public async Task ReleasePortAsync()
     {
+        await StopServingDiskAsync();
         ReleasePortRequested?.Invoke();
         await CloseFtpSessionAsync();
+    }
+
+    // ---- a D81 on this PC served as the MEGA65's drive 8 (m65 -d holds the port) ----
+
+    private CancellationTokenSource? _serve;
+    private Task? _serving;
+
+    /// <summary>The disk image being served, or null.</summary>
+    public string? ServedDisk { get; private set; }
+    /// <summary>True when serving ended but the MEGA65 could not be told to use its own drive again (a reset fixes it).</summary>
+    public bool VirtualDiskLeftOn { get; private set; }
+    public event Action? ServedDiskChanged;
+
+    /// <summary>
+    /// Serves <paramref name="d81"/> until <see cref="StopServingDiskAsync"/>, or until another
+    /// action needs the port. Returns m65's result if it ended by itself, null when stopped.
+    /// </summary>
+    public Task<ProcessResult?> ServeDiskAsync(string d81, IProgress<string>? output)
+    {
+        if (Connection is not { Kind: ConnectionKind.Serial } c) throw new InvalidOperationException("Serving a disk image needs the USB/JTAG connection.");
+        var commands = Commands ?? throw new InvalidOperationException("Install the device tools first.");
+        if (_serving is { IsCompleted: false }) throw new InvalidOperationException("A disk image is already being served. Stop it first.");
+        var run = ServeAsync(commands, c, d81, output);
+        _serving = run;
+        return run;
+    }
+
+    private async Task<ProcessResult?> ServeAsync(Mega65Commands commands, ConnectionTarget c, string d81, IProgress<string>? output)
+    {
+        await ReleasePortAsync();
+        using var claim = DeviceGate.Enter("Serving a disk image from this PC");
+        _serve = new CancellationTokenSource();
+        ServedDisk = d81;
+        ServedDiskChanged?.Invoke();
+        try
+        {
+            return await commands.ServeD81Async(c, d81, output, _serve.Token);
+        }
+        catch (OperationCanceledException) { return null; }
+        finally
+        {
+            try
+            {
+                // m65 leaves the MEGA65's disk requests pointed at the PC; point them back at its own drive.
+                VirtualDiskLeftOn = !await Task.Run(() => TurnOffVirtualDisk(c.Address));
+            }
+            finally
+            {
+                _serve.Dispose();
+                _serve = null;
+                ServedDisk = null;
+                ServedDiskChanged?.Invoke();
+            }
+        }
+    }
+
+    private static bool TurnOffVirtualDisk(string port)
+    {
+        for (var i = 0; i < 6; i++)
+        {
+            try
+            {
+                using var monitor = MonitorConnection.Open(port);
+                monitor.SendCommandAsync(Mega65Commands.VirtualD81Off).GetAwaiter().GetResult();
+                Thread.Sleep(200);
+                return true;
+            }
+            catch (Exception)
+            {
+                Thread.Sleep(400); // the port is freed a moment after m65 ends
+            }
+        }
+        return false;
+    }
+
+    /// <summary>Stops serving the disk image (if any) and waits until the port is free again.</summary>
+    public async Task StopServingDiskAsync()
+    {
+        // Waits for the whole serve, including turning the virtual disk off, even when m65 already ended by itself.
+        if (_serving is not { IsCompleted: false } serving) return;
+        _serve?.Cancel();
+        try { await serving; } catch (Exception e) when (e is IOException or InvalidOperationException) { }
     }
 
     /// <summary>Ends the browser session (the MEGA65 resets as the helper unloads).</summary>

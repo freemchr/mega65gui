@@ -74,8 +74,28 @@ It brings together:
 ### Device
 
 - Connect over USB/JTAG or Ethernet. Port lists name each COM port ("COM5 – MEGA65 USB/JTAG", "COM3 – Bluetooth (not a MEGA65)") and only pick one that could be the MEGA65.
-- Reset, switch C64/MEGA65 mode, send PRGs (with drag-and-drop) and take screenshots.
-- Run a `mega65_ftp` console for remote SD-card access.
+- Reset, switch C64/MEGA65 mode (also without a reset: Go 64 / Go 65), send PRGs (with drag-and-drop) and take screenshots, shown on the page.
+- PRG options: load without a reset, load to the address in the file (`,8,1`), PAL/NTSC, and over Ethernet mount a D81 from the card with the program.
+- **Disk from this PC:** use a `.D81` on your PC as the MEGA65's drive 8 over the USB cable, without copying it to the card (a backup copy is made first).
+- A BASIC editor that types your listing into the MEGA65, and a `mega65_ftp` console for remote SD-card access. The output can be saved to a text file.
+
+### SD Card Browser
+
+- Your PC on one side, the SD card inside the MEGA65 on the other, over USB/JTAG or Ethernet. Drag files **and whole folders** either way, or from Windows Explorer.
+- For each file already there: Replace, Skip, Replace all or Skip all. A progress bar shows the copy, and Stop ends it after the current file.
+- Names the MEGA65 cannot load (a leading `$`, commas, colons, quotes), empty files and broken D81 sizes are pointed out before copying. Optional capital names.
+- Card space and the ROMs on the card; a card in this PC's card reader can be picked as the PC side and ejected safely.
+
+### Terminal
+
+- The MEGA65's serial monitor, memory dumps and breakpoints, and a remote keyboard with the MEGA65's own keys (ESC, TAB, ALT, HELP, NO SCROLL, F9–F14, CTRL and MEGA combinations). The text can be saved.
+
+### Disk & ROM Tools
+
+- D81 disk images: create, add, extract, rename, delete, and copy files from another D81.
+- ROM start-up settings (speed, font, colours), with presets you can save and load onto the next ROM.
+- `.rdf` ROM patches: apply, or make one from an original and a changed ROM (official `romdiff`).
+- Core files: check a `.cor`, build one from a `.bit`, save the `.bit` inside a `.cor`, or make an `.mcs` for Vivado (official `bit2mcs`).
 
 ### Tools
 

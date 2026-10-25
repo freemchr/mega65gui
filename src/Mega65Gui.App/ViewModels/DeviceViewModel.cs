@@ -19,6 +19,7 @@ public sealed partial class DeviceViewModel : PageViewModel
         this.services = services;
         services.ToolsChanged += () => System.Windows.Application.Current.Dispatcher.Invoke(UpdateTools);
         services.ConnectionChanged += ShowConnection;
+        services.ServedDiskChanged += () => System.Windows.Application.Current.Dispatcher.Invoke(() => ServedDisk = services.ServedDisk);
         UpdateTools();
 
         // Watch the COM port: the USB/JTAG adapter disappears from Windows when the MEGA65 is
@@ -87,6 +88,16 @@ public sealed partial class DeviceViewModel : PageViewModel
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private bool _runAfterLoad = true;
     [ObservableProperty] private bool _c64Mode;
+    [ObservableProperty] private bool _resetFirst = true;
+    [ObservableProperty] private bool _useFileLoadAddress;
+    public IReadOnlyList<string> VideoChoices { get; } = ["Keep video mode", "PAL", "NTSC"];
+    [ObservableProperty] private string _videoChoice = "Keep video mode";
+    /// <summary>A .D81 in the card's root to mount with the program (Ethernet only).</summary>
+    [ObservableProperty] private string _mountD81Name = "";
+
+    private PrgOptions CurrentPrgOptions() => new(RunAfterLoad, C64Mode, ResetFirst, UseFileLoadAddress,
+        VideoChoice switch { "PAL" => true, "NTSC" => false, _ => null },
+        services.Connection?.Kind == ConnectionKind.Ethernet && MountD81Name.Trim() is { Length: > 0 } m ? m : null);
     [ObservableProperty] private string _sdCommand = "dir";
 
     public override Task OnShownAsync()
@@ -189,6 +200,51 @@ public sealed partial class DeviceViewModel : PageViewModel
     [RelayCommand] private Task ResetAsync() => RunToolAsync((c, t) => c.ResetAsync(t), "Resetting…");
     [RelayCommand] private Task GoC64Async() => RunToolAsync((c, t) => c.SetModeAsync(t, MachineMode.C64), "Switching to C64 mode…");
     [RelayCommand] private Task GoMega65Async() => RunToolAsync((c, t) => c.SetModeAsync(t, MachineMode.Mega65), "Switching to MEGA65 mode…");
+    [RelayCommand] private Task Go64NoResetAsync() => RunToolAsync((c, t) => c.Go64Async(t), "Switching to C64 mode without a reset…");
+    [RelayCommand] private Task Go65NoResetAsync() => RunToolAsync((c, t) => c.Go65Async(t), "Typing SYS 58552 to return to MEGA65 mode…");
+
+    // ---- a D81 on this PC as drive 8 ----
+
+    [ObservableProperty] private string? _virtualD81Path;
+    [ObservableProperty] private string? _servedDisk;
+    public bool IsServingDisk => ServedDisk is not null;
+    partial void OnServedDiskChanged(string? value) => OnPropertyChanged(nameof(IsServingDisk));
+
+    [RelayCommand]
+    private void ChooseVirtualD81()
+    {
+        if (Pick("Disk image to use as drive 8", "D81 disk images (*.d81)|*.d81") is { } f) VirtualD81Path = f;
+    }
+
+    // A separate command: ServeDisk stays running (and so disabled) for as long as the disk is served.
+    [RelayCommand]
+    private Task StopServingDiskAsync() => services.StopServingDiskAsync();
+
+    [RelayCommand]
+    private async Task ServeDiskAsync()
+    {
+        if (IsServingDisk) return;
+        if (services.Connection is not { Kind: ConnectionKind.Serial }) { Status = "Using a disk image from this PC needs the USB/JTAG connection."; return; }
+        if (VirtualD81Path is not { } path || !File.Exists(path)) { Status = "Choose a .D81 disk image first."; return; }
+        if (new FileInfo(path).Length != Mega65Gui.Core.DiskImages.D81Image.ImageSize) { Status = $"{Path.GetFileName(path)} is not a D81 disk image (819,200 bytes)."; return; }
+        if (!Confirm("Use a disk image from this PC", $"Use {Path.GetFileName(path)} as the MEGA65's drive 8?\n\n" +
+                "The MEGA65 reads and writes this file on your PC over the USB cable until you press Stop. Changes the MEGA65 saves go straight into the file, so a copy is kept in the app's backups folder first.\n\n" +
+                "Do not reset or switch off the MEGA65 while the disk is in use: the m65 tool warns that this can damage the image. Other Device actions wait until you press Stop."))
+            return;
+        try
+        {
+            var backup = Path.Combine(services.Paths.Backups, $"{Path.GetFileNameWithoutExtension(path)}-{DateTime.Now:yyyyMMdd-HHmmss}.d81");
+            File.Copy(path, backup);
+            Output.Add($"--- backup of {Path.GetFileName(path)}: {backup} ---");
+            Status = $"Serving {Path.GetFileName(path)} as drive 8. On the MEGA65, type DIR to see it. Press Stop when you are done.";
+            var r = await services.ServeDiskAsync(path, new Progress<string>(l => Output.Add(l.TrimEnd())));
+            Status = services.VirtualDiskLeftOn
+                ? "Stopped, but the MEGA65 could not be told to use its own drive again. Reset it before using drive 8."
+                : r is null ? $"Stopped. Drive 8 is the MEGA65's own drive again; {Path.GetFileName(path)} has the changes it saved."
+                : ToolFailureHints.Explain(r.StdOut + r.StdErr) ?? $"m65 stopped serving the disk (exit code {r.ExitCode}). See the output.";
+        }
+        catch (Exception e) { Status = $"Error: {e.Message}"; }
+    }
 
     [RelayCommand]
     private Task SendPrgAsync()
@@ -204,7 +260,7 @@ public sealed partial class DeviceViewModel : PageViewModel
         switch (Path.GetExtension(path).ToLowerInvariant())
         {
             case ".prg":
-                return RunToolAsync((c, t) => c.SendPrgAsync(t, path, RunAfterLoad, C64Mode), $"Sending {name}…");
+                return RunToolAsync((c, t) => c.SendPrgAsync(t, path, CurrentPrgOptions()), $"Sending {name}…");
             case ".sid":
                 return RunToolAsync((c, t) => c.SendSidAsync(t, path), $"Playing {name}…");
             case ".bas" or ".txt" or ".lst":
@@ -215,7 +271,11 @@ public sealed partial class DeviceViewModel : PageViewModel
                 return LoadBitFileAsync(path);
             case ".m65" when name.Contains("HICKUP", StringComparison.OrdinalIgnoreCase):
                 return RunToolAsync((c, t) => c.LoadHickupAsync(t, path), $"Loading {name}…");
-            case ".d81" or ".d64" or ".cor":
+            case ".d81":
+                VirtualD81Path = path;
+                Status = $"{name}: press Serve under \"Disk from this PC\" to use it as drive 8 without copying it, or copy it to the card with the SD Card Browser.";
+                return Task.CompletedTask;
+            case ".d64" or ".cor":
                 Status = $"{name}: use the SD Card Browser to copy it to the MEGA65's card.";
                 return Task.CompletedTask;
             default:
@@ -371,9 +431,72 @@ public sealed partial class DeviceViewModel : PageViewModel
         return RunToolAsync(async (c, t) =>
         {
             var r = await c.ScreenshotAsync(t, file);
-            if (r.Succeeded && File.Exists(file)) Process.Start(new ProcessStartInfo(file) { UseShellExecute = true });
+            if (r.Succeeded && File.Exists(file)) ScreenshotPath = file;
             return r;
         }, "Capturing screenshot…");
+    }
+
+    /// <summary>The last screenshot, shown on the page.</summary>
+    [ObservableProperty] private string? _screenshotPath;
+
+    [RelayCommand]
+    private void OpenScreenshot()
+    {
+        if (ScreenshotPath is { } f && File.Exists(f)) Process.Start(new ProcessStartInfo(f) { UseShellExecute = true });
+    }
+
+    [RelayCommand] private void HideScreenshot() => ScreenshotPath = null;
+
+    // ---- output ----
+
+    [RelayCommand] private void ClearOutput() => Output.Clear();
+
+    [RelayCommand]
+    private void SaveOutput()
+    {
+        var dlg = new SaveFileDialog { Title = "Save the output", Filter = "Text files (*.txt)|*.txt", FileName = $"mega65-output-{DateTime.Now:yyyyMMdd-HHmmss}.txt" };
+        if (dlg.ShowDialog() != true) return;
+        try { File.WriteAllLines(dlg.FileName, Output); Status = $"Saved the output to {dlg.FileName}."; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Status = $"Cannot save: {e.Message}"; }
+    }
+
+    // ---- BASIC editor ----
+
+    [ObservableProperty] private string _basicText = "10 PRINT \"HELLO MEGA65\"\n20 GOTO 10\n";
+    [ObservableProperty] private string? _basicPath;
+
+    [RelayCommand]
+    private void OpenBasic()
+    {
+        if (Pick("Open a BASIC listing", "BASIC text (*.bas;*.txt;*.lst)|*.bas;*.txt;*.lst|All files|*.*") is not { } f) return;
+        try { BasicText = File.ReadAllText(f).Replace("\r\n", "\n"); BasicPath = f; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Status = $"Cannot open: {e.Message}"; }
+    }
+
+    [RelayCommand]
+    private void SaveBasic()
+    {
+        var dlg = new SaveFileDialog { Filter = "BASIC text (*.bas)|*.bas|Text files (*.txt)|*.txt", FileName = BasicPath is null ? "program.bas" : Path.GetFileName(BasicPath) };
+        if (BasicPath is not null) dlg.InitialDirectory = Path.GetDirectoryName(BasicPath);
+        if (dlg.ShowDialog() != true) return;
+        try
+        {
+            File.WriteAllText(dlg.FileName, BasicText.Replace("\r\n", "\n").Replace("\n", Environment.NewLine));
+            BasicPath = dlg.FileName;
+            Status = $"Saved {dlg.FileName}.";
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Status = $"Cannot save: {e.Message}"; }
+    }
+
+    [RelayCommand]
+    private Task TypeBasicTextAsync()
+    {
+        var lines = BasicText.Split('\n').Count(l => l.Trim().Length > 0);
+        if (lines == 0) { Status = "Write or open a BASIC listing first."; return Task.CompletedTask; }
+        if (!Confirm("Type BASIC listing", $"Type {lines} line(s) into the MEGA65?\n\nThe MEGA65 should be at the READY prompt. Each line is typed as if on the keyboard, so this takes a moment. Type NEW on the MEGA65 first if you want to replace the program in memory."))
+            return Task.CompletedTask;
+        var text = BasicText;
+        return RunToolAsync((c, t) => c.TypeBasicAsync(t, text), "Typing the BASIC listing…");
     }
 
     [RelayCommand]

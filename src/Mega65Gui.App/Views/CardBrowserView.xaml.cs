@@ -55,7 +55,7 @@ public partial class CardBrowserView : UserControl
     {
         if (Vm is not { IsOpen: true } vm) return;
         var paths = e.Data.GetData(LocalFormat) is List<LocalItem> local
-            ? local.Where(i => !i.IsDirectory).Select(i => i.FullPath).ToList()
+            ? local.Select(i => i.FullPath).ToList()
             : (e.Data.GetData(DataFormats.FileDrop) as string[] ?? []).ToList();
         await vm.UploadFilesAsync(paths);
     }

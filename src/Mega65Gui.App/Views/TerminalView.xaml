@@ -11,7 +11,7 @@
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Open"/><Run Text=" – Connects to the MEGA65's built-in serial monitor over USB/JTAG. The monitor replies to short commands; its prompt is a dot (.)."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Useful commands"/><Run Text=" – h shows the core version · r shows the CPU registers · m 2001 shows memory from $2001 · d 2001 disassembles from $2001. Type a command in the box at the bottom and press Enter."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Careful"/><Run Text=" – Some monitor commands change memory or stop the CPU. If the MEGA65 stops responding, press Reset on the Device page."/></TextBlock>
-                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Remote keyboard"/><Run Text=" – Turn it on, click the blue box and type: your keys are pressed on the MEGA65. Enter is RETURN, Esc is RUN/STOP, F1–F8 are the function keys."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Remote keyboard"/><Run Text=" – Turn it on, click the blue box and type: your keys are pressed on the MEGA65. Enter is RETURN, Esc is RUN/STOP, F1–F12 are the function keys. The buttons press keys a PC does not have (ESC, HELP, NO SCROLL, F13, F14 …); CTRL, MEGA and ALT are held for the next key you press."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Developer"/><Run Text=" – Save a range of the MEGA65's memory to a file, or stop the CPU at an address (breakpoint), look at the registers, then clear it and continue."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Close"/><Run Text=" – Frees the USB connection for the other pages. It closes by itself when you leave this page."/></TextBlock>
                 </StackPanel>
@@ -22,7 +22,8 @@
             <Button Content="Open" Style="{DynamicResource AccentButtonStyle}" Command="{Binding OpenCommand}" Margin="0,0,6,0"
                     Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}"/>
             <Button Content="Close" Command="{Binding DisconnectCommand}" Margin="0,0,6,0" Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisible}}"/>
-            <Button Content="Clear" Command="{Binding ClearCommand}" Margin="0,0,18,0"/>
+            <Button Content="Clear" Command="{Binding ClearCommand}" Margin="0,0,6,0"/>
+            <Button Content="Save…" Command="{Binding SaveTranscriptCommand}" Margin="0,0,18,0" ToolTip="Save the terminal text to a file"/>
             <StackPanel Orientation="Horizontal" IsEnabled="{Binding IsOpen}" Margin="0,0,18,0">
                 <Button Content="Version" Command="{Binding QuickCommand}" CommandParameter="h" Margin="0,0,6,0" ToolTip="h: show the monitor and core version"/>
                 <Button Content="Registers" Command="{Binding QuickCommand}" CommandParameter="r" Margin="0,0,6,0" ToolTip="r: show the CPU registers"/>
@@ -60,10 +61,48 @@
                 BorderThickness="2" BorderBrush="{DynamicResource AccentFillColorDefaultBrush}" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                 Visibility="{Binding KeyboardActive, Converter={StaticResource BoolToVisible}}"
                 PreviewKeyDown="CaptureKeyDown" TextInput="CaptureTextInput" MouseDown="CaptureClick">
-            <TextBlock TextWrapping="Wrap">
-                <Run FontWeight="SemiBold" Text="Typing goes to the MEGA65."/>
-                <Run Text="Click here to focus. Enter = RETURN, Backspace = INST/DEL, arrows, Home (Shift+Home = CLR), Esc = RUN/STOP, F1–F8."/>
-            </TextBlock>
+            <StackPanel>
+                <TextBlock TextWrapping="Wrap">
+                    <Run FontWeight="SemiBold" Text="Typing goes to the MEGA65."/>
+                    <Run Text="Click here to focus. Enter = RETURN, Backspace = INST/DEL, arrows, Home (Shift+Home = CLR), Esc = RUN/STOP, Tab = TAB, F1–F12, Scroll Lock = NO SCROLL. Ctrl or Alt with a letter or digit presses it with CTRL or ALT."/>
+                </TextBlock>
+                <!-- Keys a PC keyboard does not have. Focusable=False keeps the typing focus here. -->
+                <WrapPanel Margin="0,8,0,0">
+                    <WrapPanel.Resources>
+                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                            <Setter Property="Focusable" Value="False"/>
+                            <Setter Property="Margin" Value="0,0,4,4"/>
+                            <Setter Property="Padding" Value="8,3"/>
+                            <Setter Property="MinWidth" Value="0"/>
+                            <Setter Property="Command" Value="{Binding PressKeyCommand}"/>
+                        </Style>
+                        <Style TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+                            <Setter Property="Focusable" Value="False"/>
+                            <Setter Property="Margin" Value="0,0,4,4"/>
+                            <Setter Property="Padding" Value="8,3"/>
+                            <Setter Property="MinWidth" Value="0"/>
+                        </Style>
+                    </WrapPanel.Resources>
+                    <ToggleButton Content="CTRL" IsChecked="{Binding HoldCtrl}" ToolTip="Hold CTRL for the next key"/>
+                    <ToggleButton Content="MEGA" IsChecked="{Binding HoldMega}" ToolTip="Hold the MEGA key for the next key"/>
+                    <ToggleButton Content="ALT" IsChecked="{Binding HoldAlt}" ToolTip="Hold ALT for the next key" Margin="0,0,12,4"/>
+                    <Button Content="RUN/STOP" CommandParameter="RunStop"/>
+                    <Button Content="ESC" CommandParameter="Escape"/>
+                    <Button Content="TAB" CommandParameter="Tab"/>
+                    <Button Content="HELP" CommandParameter="Help"/>
+                    <Button Content="NO SCROLL" CommandParameter="NoScroll"/>
+                    <Button Content="CLR HOME" CommandParameter="Home"/>
+                    <Button Content="↑" CommandParameter="UpArrow" ToolTip="The ↑ key (next to RESTORE)"/>
+                    <Button Content="←" CommandParameter="LeftArrow" ToolTip="The ← key (next to 1)" Margin="0,0,12,4"/>
+                    <Button Content="F9" CommandParameter="F9"/>
+                    <Button Content="F10" CommandParameter="F10"/>
+                    <Button Content="F11" CommandParameter="F11"/>
+                    <Button Content="F12" CommandParameter="F12"/>
+                    <Button Content="F13" CommandParameter="F13"/>
+                    <Button Content="F14" CommandParameter="F14"/>
+                </WrapPanel>
+                <TextBlock Style="{StaticResource Muted}" Text="RESTORE, CAPS LOCK and 40/80 are wired separately from the keyboard matrix, so they cannot be pressed remotely."/>
+            </StackPanel>
         </Border>
         <Grid DockPanel.Dock="Bottom" Margin="0,8,0,0" IsEnabled="{Binding IsOpen}">
             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>

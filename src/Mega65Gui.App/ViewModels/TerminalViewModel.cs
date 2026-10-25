@@ -57,6 +57,19 @@ public sealed partial class TerminalViewModel : PageViewModel
     [RelayCommand]
     private void Clear() { _text.Clear(); Transcript = ""; }
 
+    [RelayCommand]
+    private void SaveTranscript()
+    {
+        var dlg = new Microsoft.Win32.SaveFileDialog { Title = "Save the terminal text", Filter = "Text files (*.txt)|*.txt", FileName = $"mega65-terminal-{DateTime.Now:yyyyMMdd-HHmmss}.txt" };
+        if (dlg.ShowDialog() != true) return;
+        try
+        {
+            File.WriteAllText(dlg.FileName, _text.ToString().Replace("\n", Environment.NewLine));
+            Status = $"Saved the terminal text to {dlg.FileName}.";
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Status = $"Cannot save: {e.Message}"; }
+    }
+
     private bool _lastWasCr;
 
     private void Append(string s)
@@ -136,10 +149,22 @@ public sealed partial class TerminalViewModel : PageViewModel
         Status = "Breakpoint cleared; the CPU is running.";
     }
 
-    /// <summary>Presses a key on the MEGA65 (remote keyboard).</summary>
+    // On-screen CTRL, MEGA and ALT: held down for the next key, then released.
+    [ObservableProperty] private bool _holdCtrl;
+    [ObservableProperty] private bool _holdMega;
+    [ObservableProperty] private bool _holdAlt;
+
+    /// <summary>An on-screen key (RUN/STOP, ESC, HELP, F9–F14 …), named as in <see cref="SpecialKey"/>.</summary>
+    [RelayCommand]
+    private Task PressKeyAsync(string name) => PressAsync(KeyMatrix.For(Enum.Parse<SpecialKey>(name)));
+
+    /// <summary>Presses a key on the MEGA65 (remote keyboard), with an on-screen modifier if one is held.</summary>
     public async Task PressAsync((byte Key, byte Modifier)? key)
     {
         if (_monitor is null || key is not { } k) return;
+        var held = HoldCtrl ? KeyMatrix.Ctrl : HoldMega ? KeyMatrix.Mega : HoldAlt ? KeyMatrix.Alt : (byte?)null;
+        if (held is { } m) k = KeyMatrix.With(k, m);
+        HoldCtrl = HoldMega = HoldAlt = false;
         try { await _monitor.PressAsync(k.Key, k.Modifier); }
         catch (Exception e) when (e is IOException or InvalidOperationException or TimeoutException) { Status = e.Message; }
     }

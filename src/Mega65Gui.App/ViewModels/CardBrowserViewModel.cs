@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Mega65Gui.App.Services;
 using Mega65Gui.App.Views;
+using Mega65Gui.Core.Cores;
 using Mega65Gui.Core.Device;
 using Mega65Gui.Core.Sd;
 using Microsoft.Win32;
@@ -53,6 +54,7 @@ public sealed partial class CardBrowserViewModel : PageViewModel
     {
         IsConnected = services.Connection is not null;
         LoadLocal();
+        RefreshDrives();
         _idle.Start();
         return Task.CompletedTask;
     }
@@ -210,57 +212,197 @@ public sealed partial class CardBrowserViewModel : PageViewModel
 
     // ---------------- transfers ----------------
 
-    [RelayCommand]
-    private Task UploadAsync(IList? selected) => UploadFilesAsync(selected?.OfType<LocalItem>().Where(i => !i.IsDirectory).Select(i => i.FullPath).ToList() ?? []);
+    [ObservableProperty] private bool _isTransferring;
+    [ObservableProperty] private double _transferPercent;
+    [ObservableProperty] private string _transferText = "";
+    /// <summary>Write names to the card in capitals, as the MEGA65 shows them in a directory listing.</summary>
+    [ObservableProperty] private bool _upperCaseNames;
+    private CancellationTokenSource? _stop;
 
-    /// <summary>Uploads PC files into the card's current folder (also used for drag-and-drop from Explorer).</summary>
+    [RelayCommand]
+    private void StopTransfer()
+    {
+        _stop?.Cancel();
+        TransferText = "Stopping after the file being copied…";
+    }
+
+    [RelayCommand]
+    private Task UploadAsync(IList? selected) => UploadFilesAsync(selected?.OfType<LocalItem>().Select(i => i.FullPath).ToList() ?? []);
+
+    /// <summary>Copies PC files and folders into the card's current folder (also used for drag-and-drop from Explorer).</summary>
     public Task UploadFilesAsync(IReadOnlyList<string> paths)
     {
-        var files = paths.Where(File.Exists).ToList();
-        if (files.Count == 0) { Status = "Select one or more files on the PC side (folders are not uploaded)."; return Task.CompletedTask; }
-        return CardAsync($"Uploading {files.Count} file(s)…", async s =>
+        if (IsTransferring) { Status = "Wait for the copy to finish, or press Stop."; return Task.CompletedTask; }
+        // A whole drive (E:\) has no folder name to give it on the card.
+        var items = paths.Where(p => File.Exists(p) || Directory.Exists(p) && Path.GetDirectoryName(p.TrimEnd('\\')) is not null).ToList();
+        if (items.Count == 0) { Status = "Select one or more files or folders on the PC side (not a whole drive)."; return Task.CompletedTask; }
+        IReadOnlyList<string> warnings;
+        try { warnings = CardNames.Warnings(LocalTree(items).Select(i => (UpperCaseNames ? i.Name.ToUpperInvariant() : i.Name, i.Size, i.IsDirectory)).ToList()); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Status = $"Cannot read {e.Message}"; return Task.CompletedTask; }
+        if (warnings.Count > 0 && MessageBox.Show(Application.Current.MainWindow,
+                $"Some names may cause trouble on the MEGA65:\n\n{string.Join("\n", warnings.Take(12))}{(warnings.Count > 12 ? $"\n…and {warnings.Count - 12} more" : "")}\n\nCopy anyway?",
+                "Check names", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return Task.CompletedTask;
+        return TransferAsync($"Copying {Count(items)} to the card…", async (tree, here, stop) =>
         {
-            if (RemoteItems.Count == 0) await ListRemoteAsync(s);
-            var clashes = files.Where(f => RemoteItems.Any(r => !r.IsDirectory && r.Matches(Path.GetFileName(f)))).Select(Path.GetFileName).ToList();
-            if (clashes.Count > 0 && MessageBox.Show(Application.Current.MainWindow,
-                    $"Replace {clashes.Count} file(s) on the MEGA65's card?\n\n{string.Join("\n", clashes.Take(10))}",
-                    "Replace files", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-                return "Upload cancelled.";
-            var replies = new List<FtpReply>();
-            foreach (var f in files)
-            {
-                Status = $"Uploading {Path.GetFileName(f)}…";
-                replies.Add(await s.UploadAsync(f, Path.GetFileName(f)));
-            }
-            await ListRemoteAsync(s);
-            return Problems([.. replies]) ?? $"Uploaded {files.Count} file(s) to {s.CurrentDirectory}.";
+            var r = await new CardTransfer(tree) { UpperCaseNames = UpperCaseNames, AskOverwrite = AskReplace, Progress = TransferProgressReporter() }
+                .UploadAsync(items, here, stop);
+            return Summary(r, "to the card");
         });
     }
+
+    /// <summary>Every file and folder under the chosen PC items, for the name check.</summary>
+    private static IEnumerable<(string Name, long Size, bool IsDirectory)> LocalTree(IEnumerable<string> paths)
+    {
+        foreach (var p in paths)
+        {
+            if (File.Exists(p)) { yield return (Path.GetFileName(p), new FileInfo(p).Length, false); continue; }
+            yield return (Path.GetFileName(p), 0, true);
+            IEnumerable<FileSystemInfo> inside;
+            try { inside = new DirectoryInfo(p).EnumerateFileSystemInfos("*", SearchOption.AllDirectories).ToList(); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { continue; }
+            foreach (var i in inside.Where(i => (i.Attributes & (FileAttributes.Hidden | FileAttributes.System)) == 0))
+                yield return (i.Name, i is FileInfo f ? f.Length : 0, i is DirectoryInfo);
+        }
+    }
+
+    private static string Count(IReadOnlyCollection<string> paths) =>
+        paths.Count == 1 ? Path.GetFileName(paths.First()) : $"{paths.Count} items";
 
     [RelayCommand]
     private Task DownloadSelectedAsync(IList? selected) => DownloadAsync(selected?.OfType<RemoteEntry>().ToList() ?? []);
 
-    /// <summary>Downloads card files into the PC folder (also used for drag-and-drop to the PC side).</summary>
+    /// <summary>Copies card files and folders into the PC folder (also used for drag-and-drop to the PC side).</summary>
     public Task DownloadAsync(IReadOnlyList<RemoteEntry> items)
     {
-        var files = items.Where(i => !i.IsDirectory).ToList();
-        if (files.Count == 0) { Status = "Select one or more files on the MEGA65 side (folders are not downloaded)."; return Task.CompletedTask; }
-        return CardAsync($"Downloading {files.Count} file(s)…", async s =>
+        if (items.Count == 0) { Status = "Select one or more files or folders on the MEGA65 side."; return Task.CompletedTask; }
+        if (IsTransferring) { Status = "Wait for the copy to finish, or press Stop."; return Task.CompletedTask; }
+        var target = LocalPath;
+        return TransferAsync($"Copying {(items.Count == 1 ? items[0].Name : $"{items.Count} items")} to {target}…", async (tree, here, stop) =>
         {
-            var clashes = files.Where(f => File.Exists(Path.Combine(LocalPath, f.Name))).Select(f => f.Name).ToList();
-            if (clashes.Count > 0 && MessageBox.Show(Application.Current.MainWindow,
-                    $"Replace {clashes.Count} file(s) in {LocalPath}?\n\n{string.Join("\n", clashes.Take(10))}",
-                    "Replace files", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-                return "Download cancelled.";
-            var replies = new List<FtpReply>();
-            foreach (var f in files)
-            {
-                Status = $"Downloading {f.Name}…";
-                replies.Add(await s.DownloadAsync(f.ShortName, Path.Combine(LocalPath, f.Name)));
-            }
+            var r = await new CardTransfer(tree) { AskOverwrite = AskReplace, Progress = TransferProgressReporter() }
+                .DownloadAsync(items, here, target, stop);
             LoadLocal();
-            return Problems([.. replies]) ?? $"Downloaded {files.Count} file(s) to {LocalPath}.";
+            return Summary(r, $"to {target}");
         });
+    }
+
+    private static Task<OverwriteChoice> AskReplace(string what) => Task.FromResult(ReplaceDialog.Ask(what));
+
+    private Progress<TransferProgress> TransferProgressReporter() => new(p =>
+    {
+        TransferPercent = p.Fraction * 100;
+        if (_stop?.IsCancellationRequested != true)
+            TransferText = p.Current.Length == 0 ? "" : $"{p.FilesDone + 1} of {p.FileCount}: {p.Current}";
+    });
+
+    private static string Summary(TransferResult r, string where)
+    {
+        var text = r.Stopped ? $"Stopped. Copied {r.Copied} file(s) {where}." : $"Copied {r.Copied} file(s) {where}.";
+        if (r.FoldersMade > 0) text += $" Made {r.FoldersMade} folder(s).";
+        if (r.Skipped > 0) text += $" Kept {r.Skipped} that were already there.";
+        if (r.Failed > 0) text += $" {r.Failed} failed.";
+        if (r.Problems.Count > 0) text += " Problems: " + string.Join("; ", r.Problems.Take(5)) + (r.Problems.Count > 5 ? "…" : "");
+        return text;
+    }
+
+    /// <summary>Runs a copy in the card's current folder with progress and Stop, then shows that folder again.</summary>
+    private Task TransferAsync(string busy, Func<FtpCardTree, string, CancellationToken, Task<string>> copy) => CardAsync(busy, async s =>
+    {
+        var here = s.CurrentDirectory.Trim('/');
+        var tree = new FtpCardTree(s, "SD card in the MEGA65");
+        tree.AlreadyIn(here);
+        _stop = new CancellationTokenSource();
+        IsTransferring = true;
+        TransferPercent = 0;
+        TransferText = "";
+        try
+        {
+            return await copy(tree, here, _stop.Token);
+        }
+        finally
+        {
+            IsTransferring = false;
+            _stop?.Dispose();
+            _stop = null;
+            // Back to the folder the user was looking at, whatever the copy walked through. If the
+            // session has died, the copy's own error is the one to show.
+            try
+            {
+                await tree.OpenAsync(here);
+                await ListRemoteAsync(s);
+            }
+            catch (Exception e) when (e is IOException or TimeoutException or InvalidOperationException) { }
+            TransferText = "";
+        }
+    });
+
+    // ---------------- card information ----------------
+
+    [ObservableProperty] private string _cardSpace = "";
+
+    /// <summary>Free space ("df", which reads the whole allocation table, so slow on big cards) and the ROMs on the card.</summary>
+    [RelayCommand]
+    private Task CardInfoAsync() => CardAsync("Counting free space on the card (this takes a while on large cards)…", async s =>
+    {
+        var df = await s.FreeSpaceAsync();
+        var roms = await s.ExecuteAsync("roms");
+        foreach (var line in (df.Output + "\n" + roms.Output).Split('\n', StringSplitOptions.RemoveEmptyEntries)) AddOutput(line);
+        CardSpace = SpaceText(df.Output);
+        return Problems(df) ?? (CardSpace.Length > 0 ? $"Card: {CardSpace}. The ROMs on the card are listed under Card tool output." : "See Card tool output.");
+    });
+
+    private static string SpaceText(string output) =>
+        Mega65Gui.Core.Sd.CardSpace.Parse(output) is { } x ? $"{x.FreeMb:N0} MB free of {x.TotalMb:N0} MB" : "";
+
+    // ---------------- card readers on this PC ----------------
+
+    public sealed record DriveChoice(string Root, string Label)
+    {
+        public override string ToString() => Label;
+    }
+
+    public ObservableCollection<DriveChoice> Drives { get; } = [];
+    [ObservableProperty] private DriveChoice? _selectedDrive;
+    [ObservableProperty] private bool _localIsRemovable;
+
+    /// <summary>Removable drives, such as an SD card in this PC's card reader.</summary>
+    [RelayCommand]
+    private void RefreshDrives()
+    {
+        Drives.Clear();
+        foreach (var d in DriveInfo.GetDrives().Where(d => d.DriveType == DriveType.Removable && d.IsReady))
+        {
+            string label;
+            try { label = $"{d.Name.TrimEnd('\\')} {(d.VolumeLabel.Length > 0 ? d.VolumeLabel : "Removable")} ({d.TotalSize / 1_000_000_000.0:0.#} GB)"; }
+            catch (IOException) { label = d.Name; }
+            Drives.Add(new DriveChoice(d.Name, label));
+        }
+    }
+
+    partial void OnSelectedDriveChanged(DriveChoice? value)
+    {
+        if (value is null) return;
+        LocalPath = value.Root;
+        LoadLocal();
+    }
+
+    partial void OnLocalPathChanged(string value) => LocalIsRemovable = CardEjector.RemovableDriveOf(value) is not null;
+
+    [RelayCommand]
+    private void EjectLocal()
+    {
+        if (CardEjector.RemovableDriveOf(LocalPath) is not { } drive) return;
+        try
+        {
+            CardEjector.Eject(drive);
+            LocalPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            SelectedDrive = null;
+            LoadLocal();
+            RefreshDrives();
+            Status = $"{drive} ejected. You can take the card out.";
+        }
+        catch (Exception e) when (e is IOException or System.ComponentModel.Win32Exception) { Status = e.Message; }
     }
 
     // ---------------- card file operations ----------------

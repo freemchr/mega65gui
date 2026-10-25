@@ -152,8 +152,13 @@ public sealed class FtpCardTree(FtpSession session, string description) : ICardT
 {
     public string Description => description;
 
+    // The folder reached last, and the prompt's path there: many files in one folder need only one walk.
+    private (string Dir, string Prompt)? _at;
+
     private async Task<bool> GoToAsync(string dir, CancellationToken ct)
     {
+        if (_at is { } at && string.Equals(at.Dir, dir, StringComparison.OrdinalIgnoreCase) && at.Prompt == session.CurrentDirectory) return true;
+        _at = null;
         for (var i = 0; i < 32 && session.CurrentDirectory is not ("/" or ""); i++)
             Check(await session.ChangeDirectoryAsync("..", ct), "cd ..");
         foreach (var part in dir.Split('/', StringSplitOptions.RemoveEmptyEntries))
@@ -162,8 +167,15 @@ public sealed class FtpCardTree(FtpSession session, string description) : ICardT
             if (entry is null) return false;
             Check(await session.ChangeDirectoryAsync(entry.ShortName, ct), $"cd {part}");
         }
+        _at = (dir, session.CurrentDirectory);
         return true;
     }
+
+    /// <summary>Goes to a folder (the SD Card Browser's own after a copy); false when it is not on the card.</summary>
+    public Task<bool> OpenAsync(string dir, CancellationToken ct = default) => GoToAsync(dir, ct);
+
+    /// <summary>Tells the tree the session is already in <paramref name="dir"/>, so copying there needs no walk from the root.</summary>
+    public void AlreadyIn(string dir) => _at = (dir, session.CurrentDirectory);
 
     public async Task<IReadOnlyList<RemoteEntry>?> ListAsync(string dir, CancellationToken ct) =>
         await GoToAsync(dir, ct) ? await session.ListAsync(ct) : null;
