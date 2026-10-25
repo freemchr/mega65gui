@@ -69,7 +69,7 @@
                     <!-- Inline USB/JTAG connect while not connected that way -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,16,4"
                                 Visibility="{Binding IsUsbJtag, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}">
-                        <ComboBox ItemsSource="{Binding Ports}" SelectedItem="{Binding SelectedPort}" MinWidth="90" Margin="0,0,6,0"
+                        <ComboBox ItemsSource="{Binding Ports}" SelectedValue="{Binding SelectedPort}" SelectedValuePath="Name" DisplayMemberPath="Label" MinWidth="90" MaxWidth="260" Margin="0,0,6,0"
                                   ToolTip="The MEGA65's USB/JTAG port"/>
                         <Button Command="{Binding RefreshPortsCommand}" ToolTip="Refresh ports" Margin="0,0,6,0">
                             <TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12"/>

@@ -73,13 +73,18 @@ It brings together:
 
 ### Device
 
-- Connect over USB/JTAG or Ethernet.
+- Connect over USB/JTAG or Ethernet. Port lists name each COM port ("COM5 – MEGA65 USB/JTAG", "COM3 – Bluetooth (not a MEGA65)") and only pick one that could be the MEGA65.
 - Reset, switch C64/MEGA65 mode, send PRGs (with drag-and-drop) and take screenshots.
 - Run a `mega65_ftp` console for remote SD-card access.
 
 ### Tools
 
 Installs the official mega65-tools builds from the Filehost.
+
+### Help and new versions
+
+- **Report a problem** (sidebar or About): shows the app's details (version, page, connection, COM ports, tools) and opens a GitHub issue with them filled in. Nothing is sent until you post it, and no passwords, tokens or account names are included.
+- At start-up the app checks GitHub for a newer version and shows a link in the sidebar. Nothing is downloaded by itself; turn the check off on the About page.
 
 ## Safety
 
@@ -96,6 +101,7 @@ Installs the official mega65-tools builds from the Filehost.
 - [M65Connect feature parity](docs/M65CONNECT-PARITY.md)
 - [Licensing review](docs/LICENSING.md)
 - [Roadmap](docs/ROADMAP.md)
+- [Releasing](docs/RELEASING.md)
 - [Core loading feasibility (SD, flash slots, JTAG, Pico loader)](docs/CORE-LOADING-FEASIBILITY.md)
 
 ## Build
@@ -109,7 +115,7 @@ dotnet run --project src/Mega65Gui.App
 
 ## Support
 
-- **Report a problem or request a feature:** [GitHub Issues](https://github.com/freemchr/mega65gui/issues).
+- **Report a problem:** use **Report a problem** in the app, so the details come with it; or [GitHub Issues](https://github.com/freemchr/mega65gui/issues) for problems and feature requests.
 - **Source and documentation:** https://github.com/freemchr/mega65gui
 - **Support the project:** if MEGA65 GUI helps you, you can [buy me a coffee](https://buymeacoffee.com/cjf077).
 
@@ -118,7 +124,7 @@ dotnet run --project src/Mega65Gui.App
 - **The official [MEGA65 tools](https://github.com/MEGA65/mega65-tools)** (`m65`, `mega65_ftp`, `etherload`, `romdiff`) by the MEGA65 project, GPL-3.0. MEGA65 GUI downloads them from the Filehost and runs them as separate programs.
 - **The [MEGA65 Filehost](https://files.mega65.org):** releases, ROMs and software.
 - **[M65Connect](https://github.com/MEGA65/m65connect)'s documentation:** used as a feature reference. No M65Connect code is included.
-- **Libraries:** SharpCompress, CommunityToolkit.Mvvm and .NET (MIT).
+- **Libraries:** SharpCompress, CommunityToolkit.Mvvm and .NET, including System.Management (MIT).
 
 MEGA65 GUI is an independent project and is not an official MEGA65 product.
 

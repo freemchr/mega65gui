@@ -57,6 +57,12 @@ public sealed partial class CardBrowserViewModel : PageViewModel
         return Task.CompletedTask;
     }
 
+    /// <summary>Set by the shell so the page can open another page.</summary>
+    public Action<string>? Navigate { get; set; }
+
+    [RelayCommand] private void OpenSdSync() => Navigate?.Invoke("SD Card Sync");
+    [RelayCommand] private void OpenDevice() => Navigate?.Invoke("Device");
+
     /// <summary>Called when the user leaves the page: release the port.</summary>
     public async Task OnHiddenAsync()
     {

@@ -71,7 +71,7 @@
                         <!-- Inline connect when not connected -->
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
                                     Visibility="{Binding IsConnected, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}">
-                            <ComboBox ItemsSource="{Binding Ports}" SelectedItem="{Binding SelectedPort}" MinWidth="100" Margin="0,0,6,0"
+                            <ComboBox ItemsSource="{Binding Ports}" SelectedValue="{Binding SelectedPort}" SelectedValuePath="Name" DisplayMemberPath="Label" MinWidth="100" MaxWidth="260" Margin="0,0,6,0"
                                       ToolTip="The MEGA65's USB/JTAG port"/>
                             <Button Command="{Binding RefreshPortsCommand}" ToolTip="Refresh ports" Margin="0,0,6,0">
                                 <TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12"/>
@@ -681,7 +681,7 @@
                                 <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="70"/><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                     <TextBlock Text="USB/JTAG" Style="{StaticResource Label}"/>
-                                    <ComboBox Grid.Column="1" ItemsSource="{Binding Ports}" SelectedItem="{Binding SelectedPort}" Margin="0,0,6,0"/>
+                                    <ComboBox Grid.Column="1" ItemsSource="{Binding Ports}" SelectedValue="{Binding SelectedPort}" SelectedValuePath="Name" DisplayMemberPath="Label" Margin="0,0,6,0"/>
                                     <Button Grid.Column="2" Command="{Binding RefreshPortsCommand}" ToolTip="Refresh ports" Margin="0,0,6,0">
                                         <TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="12"/>
                                     </Button>
@@ -1045,12 +1045,27 @@
                         <TextBlock TextWrapping="Wrap" Margin="0,0,0,10"
                                    Text="A Windows app for maintaining, updating and using a MEGA65: Filehost downloads, guided updates, SD card management and device control."/>
                         <TextBlock Text="Support and issues" Style="{StaticResource SectionTitle}"/>
+                        <Button Content="Report a problem…" Command="{Binding OpenReportProblemCommand}" HorizontalAlignment="Left" Margin="0,0,0,6"
+                                ToolTip="Collects the app's details (version, connection, COM ports) and starts a GitHub issue with them"/>
                         <Button Style="{StaticResource FlatRow}" Command="{Binding OpenCommand}" CommandParameter="https://github.com/freemchr/mega65gui/issues" HorizontalAlignment="Left" Padding="0">
-                        <TextBlock Text="Report a problem or request a feature (GitHub Issues)" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" TextDecorations="Underline"/>
+                        <TextBlock Text="Request a feature or see known problems (GitHub Issues)" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" TextDecorations="Underline"/>
                     </Button>
                         <Button Style="{StaticResource FlatRow}" Command="{Binding OpenCommand}" CommandParameter="https://github.com/freemchr/mega65gui" HorizontalAlignment="Left" Padding="0">
                         <TextBlock Text="Source code and documentation: github.com/freemchr/mega65gui" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" TextDecorations="Underline"/>
                     </Button>
+                        <TextBlock Text="New versions" Style="{StaticResource SectionTitle}" Margin="0,12,0,4"/>
+                        <CheckBox Content="Check for a new version when the app starts" IsChecked="{Binding CheckForNewVersions}"
+                                  ToolTip="Asks GitHub for the newest MEGA65 GUI release. Nothing is downloaded or installed automatically."/>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <Button Content="Check now" Command="{Binding CheckNowCommand}" Margin="0,0,10,0"/>
+                            <TextBlock Text="{Binding NewVersionText}" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="420"/>
+                        </StackPanel>
+                        <Button Style="{StaticResource FlatRow}" Command="{Binding OpenCommand}" CommandParameter="{Binding NewVersionUrl}" HorizontalAlignment="Left" Padding="0" Margin="0,4,0,0"
+                                Visibility="{Binding NewVersionUrl, Converter={StaticResource NullToCollapsed}}">
+                            <TextBlock Text="Download the new version" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" TextDecorations="Underline"/>
+                        </Button>
+                        <TextBlock Text="{Binding Status}" Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                   Visibility="{Binding Status, Converter={StaticResource NullToCollapsed}}"/>
                         <TextBlock Text="Support the project" Style="{StaticResource SectionTitle}" Margin="0,12,0,4"/>
                         <TextBlock TextWrapping="Wrap" Margin="0,0,0,4" Text="MEGA65 GUI is free. If it helps you, you can buy me a coffee."/>
                         <Button Style="{StaticResource FlatRow}" Command="{Binding OpenCommand}" CommandParameter="https://buymeacoffee.com/cjf077" HorizontalAlignment="Left" Padding="0">

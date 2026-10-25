@@ -69,7 +69,7 @@ public sealed partial class CoreManagerViewModel : PageViewModel
         IsConnected = c is not null;
         IsUsbJtag = c?.Kind == ConnectionKind.Serial;
         ToolsInstalled = services.Tools.Current is not null;
-        AdapterPresent = IsUsbJtag || SerialMonitorProbe.ListPorts().Any();
+        AdapterPresent = IsUsbJtag || Ports.Any(p => p.CouldBeMega65);
         DeviceBusy = services.DeviceGate.Current is { } busy ? $"Busy: {busy}" : null;
         ConnectionText = c is null
             ? "No MEGA65 connected"
@@ -92,7 +92,7 @@ public sealed partial class CoreManagerViewModel : PageViewModel
 
     // ---- Connect from this page (USB/JTAG), as on Update My MEGA65 ----
 
-    public ObservableCollection<string> Ports { get; } = [];
+    public ObservableCollection<SerialPortInfo> Ports { get; } = [];
     [ObservableProperty] private string? _selectedPort;
 
     [RelayCommand]
@@ -100,8 +100,8 @@ public sealed partial class CoreManagerViewModel : PageViewModel
     {
         var keep = SelectedPort;
         Ports.Clear();
-        foreach (var p in SerialMonitorProbe.ListPorts()) Ports.Add(p);
-        SelectedPort = keep is not null && Ports.Contains(keep) ? keep : Ports.LastOrDefault();
+        foreach (var p in SerialPorts.List()) Ports.Add(p);
+        SelectedPort = keep is not null && Ports.Any(p => p.Name == keep) ? keep : SerialPorts.Preferred(Ports);
         ShowHardware();
     }
 
@@ -642,7 +642,7 @@ public sealed partial class CoreManagerViewModel : PageViewModel
             await Task.Delay(TimeSpan.FromSeconds(3), ct);
             if (services.Mega65CoreAnswering) break; // the Device page's port watcher reconnected
             var ports = SerialMonitorProbe.ListPorts();
-            port ??= ports.LastOrDefault();
+            port ??= SerialPorts.Preferred(SerialPorts.List());
             if (port is null || !ports.Contains(port, StringComparer.OrdinalIgnoreCase)) continue; // switched off: the adapter's port is gone
             try { await services.ConnectSerialAsync(port, ct); }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or TimeoutException or InvalidOperationException) { }

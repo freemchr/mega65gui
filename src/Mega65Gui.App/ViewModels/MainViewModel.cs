@@ -15,7 +15,7 @@ public sealed partial class MainViewModel : ObservableObject
         CardBrowser = new CardBrowserViewModel(services);
         DiskRomTools = new ToolsPageViewModel(services);
         Terminal = new TerminalViewModel(services);
-        About = new AboutViewModel();
+        About = new AboutViewModel(services);
         SdSync = new SdSyncViewModel(services);
         Tools = new ToolsViewModel(services);
         Features = new FeaturesViewModel();
@@ -25,6 +25,8 @@ public sealed partial class MainViewModel : ObservableObject
             Navigate = title => Selected = Pages.First(p => p.Title == title),
         };
         CoreManager.Navigate = Shell.Navigate;
+        CardBrowser.Navigate = Shell.Navigate;
+        Shell.ReportProblem = About.ReportProblem = () => Views.ReportProblemWindow.Show(ProblemDetails.Collect(services, Selected));
         _selected = Update;
     }
 

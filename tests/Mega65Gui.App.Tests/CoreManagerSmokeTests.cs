@@ -15,7 +15,8 @@ namespace Mega65Gui.App.Tests;
 
 /// <summary>
 /// UI smoke tests: the Core Manager page is built with the app's real resources, laid out at the
-/// main window's size in every tab and view, and must produce no WPF binding errors. Each state
+/// main window's size in every tab and view, and must produce no WPF binding errors. The Update,
+/// SD Card Browser, Device and About pages follow, with no MEGA65 connected. Each state
 /// is also saved as a PNG in the test output folder (CoreManagerRender) for a visual check.
 /// Nothing touches the network or a MEGA65: the profile is an empty temporary folder.
 /// </summary>
@@ -110,6 +111,22 @@ public class CoreManagerSmokeTests
             Render(window, Path.Combine(outDir, $"{tab + 3}-tab{tab}.png"));
         }
         Assert.Equal(8, vm.SlotRows.Count);
+
+        // The pages that show COM ports or a "no MEGA65" state, through their DataTemplates in Pages.xaml.
+        var update = new UpdateViewModel(services, new NoGate());
+        var browser = new CardBrowserViewModel(services);
+        var device = new DeviceViewModel(services);
+        var about = new AboutViewModel(services);
+        foreach (var (page, name) in new PageViewModel[] { update, browser, device, about }.Select(p => (p, p.Title.Replace(' ', '-'))))
+        {
+            window.Content = new System.Windows.Controls.ContentControl { Content = page, Margin = new Thickness(16) };
+            Pump(page.OnShownAsync());
+            Render(window, Path.Combine(outDir, $"page-{name}.png"));
+        }
+        // Nothing connected: the update starts on the card in a PC reader, and Run asks for the model, not a COM port.
+        Assert.False(update.CardInDevice);
+        Pump(update.RunCommand.ExecuteAsync(null));
+        Assert.Equal(Core.Update.UpdatePreflight.ChooseModel, update.Status);
 
         window.Close();
         PresentationTraceSources.DataBindingSource.Listeners.Remove(errors);

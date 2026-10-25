@@ -65,7 +65,7 @@ public sealed partial class UpdateViewModel : PageViewModel
 
     partial void OnCardInDeviceChanged(bool value) => _cardChoiceMade = true;
 
-    public ObservableCollection<string> Ports { get; } = [];
+    public ObservableCollection<SerialPortInfo> Ports { get; } = [];
     [ObservableProperty] private string? _selectedPort;
 
     public override Task OnShownAsync()
@@ -96,8 +96,8 @@ public sealed partial class UpdateViewModel : PageViewModel
     {
         var keep = SelectedPort;
         Ports.Clear();
-        foreach (var p in SerialMonitorProbe.ListPorts()) Ports.Add(p);
-        SelectedPort = keep is not null && Ports.Contains(keep) ? keep : Ports.LastOrDefault();
+        foreach (var p in SerialPorts.List()) Ports.Add(p);
+        SelectedPort = keep is not null && Ports.Any(p => p.Name == keep) ? keep : SerialPorts.Preferred(Ports);
     }
 
     [RelayCommand]
@@ -114,11 +114,11 @@ public sealed partial class UpdateViewModel : PageViewModel
     {
         if (services.Connection is not null && !services.Device.NoResponse) return true;
         RefreshPorts();
-        var port = SelectedPort ?? (Ports.Count == 1 ? Ports[0] : null);
-        if (Ports.Count == 0)
+        var port = SelectedPort;
+        if (port is null && !Ports.Any(p => p.CouldBeMega65))
         {
-            Status = "No MEGA65 found over USB/JTAG. Switch it on and plug in the USB cable" +
-                     (CardInDevice ? ", or choose \"In a PC card reader\"." : ", or choose your model.");
+            Status = (Ports.Count == 0 ? "No MEGA65 found over USB/JTAG." : $"No MEGA65 found over USB/JTAG ({string.Join(", ", Ports.Select(p => p.Label))}).") +
+                     " Switch it on and plug in the USB cable" + (CardInDevice ? ", or choose \"In a PC card reader\"." : ", or choose your model.");
             return false;
         }
         if (port is null) { Status = "Choose the MEGA65's COM port and press Connect."; return false; }
@@ -156,19 +156,19 @@ public sealed partial class UpdateViewModel : PageViewModel
         if (dlg.ShowDialog() == true) SdCardPath = dlg.FolderName;
     }
 
+    private UpdatePreflight Preflight() => new(
+        CardInDevice,
+        ModelChosen: SelectedModel?.Model is not null,
+        Connected: services.Connection is not null && !services.Device.NoResponse,
+        ConnectedOverUsb: services.Connection?.Kind == ConnectionKind.Serial,
+        ToolsInstalled: services.Tools.Current is not null,
+        CardFolderExists: !string.IsNullOrWhiteSpace(SdCardPath) && Directory.Exists(SdCardPath));
+
     [RelayCommand]
     private async Task RunAsync()
     {
-        var connected = services.Connection is not null && !services.Device.NoResponse;
-        // A card in a PC reader usually means the MEGA65 is not connected, so "Auto" cannot read
-        // the model. Ask for the model rather than a COM port.
-        if (!CardInDevice && SelectedModel?.Model is null && !connected)
-        {
-            Status = "Choose your MEGA65 model. \"Auto\" can only read it from a MEGA65 connected by the USB cable.";
-            return;
-        }
-        // The card inside the MEGA65 is reached over USB/JTAG: connect first.
-        if (CardInDevice && !connected)
+        var check = Preflight().Check();
+        if (check.Action == PreflightAction.Connect)
         {
             IsBusy = true;
             try
@@ -176,14 +176,11 @@ public sealed partial class UpdateViewModel : PageViewModel
                 if (!await EnsureConnectedAsync()) return;
             }
             finally { IsBusy = false; }
+            check = Preflight().Check();
         }
-        if (CardInDevice)
+        if (check.Action != PreflightAction.Go)
         {
-            if (services.Tools.Current is null) { Status = "Updating the card inside the MEGA65 needs the device tools. Install them from the sidebar."; return; }
-        }
-        else if (string.IsNullOrWhiteSpace(SdCardPath) || !Directory.Exists(SdCardPath))
-        {
-            Status = "Choose the SD card folder first.";
+            Status = check.Message ?? "";
             return;
         }
         if (IncludeRom && !services.Session.IsSignedIn && !Views.SignInWindow.Show(services))

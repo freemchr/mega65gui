@@ -8,7 +8,7 @@
                        Text="Your PC on the left, the SD card inside the MEGA65 on the right. Drag files between them, or from Windows Explorer onto the card."/>
             <Expander Header="How to use this page" Style="{StaticResource PageHelp}">
                 <StackPanel Margin="24,6,0,0" MaxWidth="900" HorizontalAlignment="Left">
-                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="What it does"/><Run Text=" – Copies files between this PC (left) and the SD card inside the MEGA65 (right) over the USB cable, without taking the card out."/></TextBlock>
+                    <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="What it does"/><Run Text=" – Copies files between this PC (left) and the SD card inside the MEGA65 (right) over the USB cable, without taking the card out. For a card in this PC's card reader, use SD Card Sync or File Explorer."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Open card"/><Run Text=" – Loads a small helper program into the MEGA65. Anything unsaved in its memory is lost, and the MEGA65 resets when you close the card."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="Arrows"/><Run Text=" – → copies the selected PC files onto the card; ← copies the selected card files to the PC folder. You can also drag files, including from Windows Explorer."/></TextBlock>
                     <TextBlock Style="{StaticResource HelpLine}"><Run FontWeight="SemiBold" Text="New folder, Rename, Delete"/><Run Text=" – Change the files on the card. Delete always asks first."/></TextBlock>
@@ -144,8 +144,33 @@
                                 </GridView>
                             </ListView.View>
                         </ListView>
+                        <!-- No MEGA65 connected: this page cannot reach a card in a PC card reader -->
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="{Binding IsConnected, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}">
+                            <TextBlock Text="&#xE88E;" Style="{StaticResource Icon}" FontSize="28" HorizontalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+                            <TextBlock Text="No MEGA65 connected" HorizontalAlignment="Center" Margin="0,8,0,4"/>
+                            <TextBlock Style="{StaticResource Muted}" HorizontalAlignment="Center" TextAlignment="Center" MaxWidth="300" TextWrapping="Wrap"
+                                       Text="This page reaches the SD card while it is inside the MEGA65, over the USB cable. Connect on the Device page first. If the card is in this PC's card reader, use SD Card Sync or Windows File Explorer instead."/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                                <Button Content="Device page" Style="{DynamicResource AccentButtonStyle}" Command="{Binding OpenDeviceCommand}" Margin="0,0,8,0"/>
+                                <Button Content="SD Card Sync" Command="{Binding OpenSdSyncCommand}"/>
+                            </StackPanel>
+                        </StackPanel>
                         <!-- Shown until the card is opened -->
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisible}, ConverterParameter=invert}">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding IsOpen}" Value="False"/>
+                                                <Condition Binding="{Binding IsConnected}" Value="True"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
                             <TextBlock Text="&#xE88E;" Style="{StaticResource Icon}" FontSize="28" HorizontalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                             <TextBlock Text="The MEGA65's SD card is not open" HorizontalAlignment="Center" Margin="0,8,0,4"/>
                             <TextBlock Style="{StaticResource Muted}" HorizontalAlignment="Center" TextAlignment="Center" MaxWidth="280"

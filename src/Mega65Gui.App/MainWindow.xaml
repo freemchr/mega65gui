@@ -14,6 +14,22 @@
 
                 <!-- Footer: device, tools, account (always visible) -->
                 <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,12" DataContext="{Binding Shell}">
+                    <!-- A newer MEGA65 GUI on GitHub -->
+                    <Button Style="{StaticResource FlatRow}" Command="{Binding OpenNewVersionCommand}" Margin="0,0,0,6"
+                            ToolTip="Opens the release page, where you can download the new version."
+                            Visibility="{Binding NewVersionText, Converter={StaticResource NullToCollapsed}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE896;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0" Foreground="{StaticResource M65Orange}"/>
+                            <TextBlock Text="{Binding NewVersionText}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" MaxWidth="160"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource FlatRow}" Command="{Binding OpenReportProblemCommand}" Margin="0,0,0,6"
+                            ToolTip="Collects the app's details (version, connection, COM ports) and starts a GitHub issue with them.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8BD;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0"/>
+                            <TextBlock Text="Report a problem" FontSize="12"/>
+                        </StackPanel>
+                    </Button>
                     <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,10"/>
                     <Button Style="{StaticResource FlatRow}" Command="{Binding OpenDeviceCommand}" Margin="0,0,0,2"
                             ToolTip="Device connection. Click to open the Device page.">

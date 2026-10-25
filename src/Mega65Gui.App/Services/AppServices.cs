@@ -14,22 +14,24 @@ public sealed class AppServices
     public AppServices()
     {
         Paths = AppPaths.Default();
+        Settings = new AppSettings(Paths.SettingsFile);
+        Settings.Load();
         // One cookie container so a Filehost sign-in applies to catalogue reads and downloads alike.
         Http = new HttpClient(new HttpClientHandler { CookieContainer = new System.Net.CookieContainer(), UseCookies = true })
         {
             Timeout = TimeSpan.FromMinutes(10),
         };
-        Http.DefaultRequestHeaders.UserAgent.ParseAdd("Mega65Gui/0.1 (+https://github.com/freemchr/mega65gui)");
+        Http.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
         Filehost = new FilehostClient(Http);
         Session = new FilehostSession(Http);
         Credentials = new CredentialStore(Path.Combine(Paths.Root, "filehost-account.json"));
         var anonymousHttp = new HttpClient(new HttpClientHandler { UseCookies = false }) { Timeout = TimeSpan.FromMinutes(2) };
-        anonymousHttp.DefaultRequestHeaders.UserAgent.ParseAdd("Mega65Gui/0.1 (+https://github.com/freemchr/mega65gui)");
+        anonymousHttp.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
         Catalogue = new CatalogueService(Filehost, Paths, session: Session, anonymousClient: new FilehostClient(anonymousHttp));
         Downloads = new DownloadManager(Http, Paths);
         Uploads = new FilehostUploads(Http, Session);
         GitHubHttp = new HttpClient(new HttpClientHandler { UseCookies = false }) { Timeout = TimeSpan.FromMinutes(10) };
-        GitHubHttp.DefaultRequestHeaders.UserAgent.ParseAdd("Mega65Gui/0.1 (+https://github.com/freemchr/mega65gui)");
+        GitHubHttp.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
         GitHubToken = new SecretStore(Path.Combine(Paths.Root, "github-token.json"), "Mega65Gui.GitHub");
         GitHub = new GitHubReleases(GitHubHttp, Path.Combine(Paths.CatalogueCache, "github")) { Token = GitHubToken.Load() };
         UploadLinks = new UploadLinkStore(Path.Combine(Paths.Root, "upload-links.json"));
@@ -42,7 +44,13 @@ public sealed class AppServices
         CoreLibrary.Load();
     }
 
+    /// <summary>This build's version, e.g. 1.2.0.</summary>
+    public static Version AppVersion { get; } = AppReleaseCheck.Normalise(typeof(AppServices).Assembly.GetName().Version ?? new Version(0, 1));
+
+    private static string UserAgent => $"Mega65Gui/{AppReleaseCheck.Display(AppVersion)} (+https://github.com/freemchr/mega65gui)";
+
     public AppPaths Paths { get; }
+    public AppSettings Settings { get; }
     public HttpClient Http { get; }
     public FilehostClient Filehost { get; }
     public FilehostSession Session { get; }
@@ -192,4 +200,29 @@ public sealed class AppServices
     }
 
     public void NotifyToolsChanged() => ToolsChanged?.Invoke();
+
+    // ---- New MEGA65 GUI versions on GitHub ----
+
+    /// <summary>A newer release than this build, once a check found one.</summary>
+    public GitHubRelease? NewRelease { get; private set; }
+    /// <summary>When the last check finished, and what it said ("You have the newest version." or the problem).</summary>
+    public string? NewReleaseCheckText { get; private set; }
+    public event Action? NewReleaseChanged;
+
+    /// <summary>Looks for a newer release. Problems (offline, GitHub's limit) only go into the check text.</summary>
+    public async Task CheckForNewVersionAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            NewRelease = await AppReleaseCheck.CheckAsync(GitHub, AppVersion, ct);
+            NewReleaseCheckText = NewRelease is { } r
+                ? $"Version {AppReleaseCheck.Display(AppReleaseCheck.ParseTag(r.Tag)!)} is available."
+                : $"You have the newest version ({AppReleaseCheck.Display(AppVersion)}).";
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or FilehostUploadException or System.Text.Json.JsonException)
+        {
+            NewReleaseCheckText = $"Could not check for a new version: {e.Message}";
+        }
+        NewReleaseChanged?.Invoke();
+    }
 }

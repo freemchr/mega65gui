@@ -76,7 +76,7 @@ public sealed partial class DeviceViewModel : PageViewModel
         Status = "Device tools installed.";
     }, "Installing device tools…");
 
-    public ObservableCollection<string> Ports { get; } = [];
+    public ObservableCollection<SerialPortInfo> Ports { get; } = [];
     public ObservableCollection<string> EthernetDevices { get; } = [];
     public ObservableCollection<string> Output { get; } = [];
 
@@ -98,15 +98,21 @@ public sealed partial class DeviceViewModel : PageViewModel
     [RelayCommand]
     private void RefreshPorts()
     {
+        var keep = SelectedPort;
         Ports.Clear();
-        foreach (var p in SerialMonitorProbe.ListPorts()) Ports.Add(p);
-        SelectedPort ??= Ports.LastOrDefault();
+        foreach (var p in SerialPorts.List()) Ports.Add(p);
+        SelectedPort = keep is not null && Ports.Any(p => p.Name == keep) ? keep : SerialPorts.Preferred(Ports);
     }
 
     [RelayCommand]
     private Task ConnectSerialAsync() => GuardAsync(async () =>
     {
-        if (SelectedPort is null) { Status = "Choose a COM port."; return; }
+        if (SelectedPort is null)
+        {
+            Status = Ports.Any(p => p.CouldBeMega65) ? "Choose the MEGA65's COM port."
+                : "No MEGA65 found over USB/JTAG. Switch it on and plug in the USB cable, then press the refresh button.";
+            return;
+        }
         _lostPort = null;
         await services.ConnectSerialAsync(SelectedPort);
         Status = "";

@@ -17,7 +17,7 @@ public sealed record Feature(string Area, string Name, FeatureStatus Status, str
 
 /// <summary>
 /// Feature parity tracker against M65Connect's documented functions. This is the single source
-/// for the in-app Features page and docs/FEATURE-MATRIX.md.
+/// for the in-app Features page and docs/M65CONNECT-PARITY.md (a test keeps them in step).
 /// </summary>
 public static class FeatureCatalog
 {
@@ -35,11 +35,14 @@ public static class FeatureCatalog
         new("Update", "Update My MEGA65 (12-step guided workflow)", FeatureStatus.Implemented, "Card reader, USB/JTAG, Ethernet", "UpdateEngine", "Approval before every write; backups; report. Run against a real card copy (R6, with ROM) 2026-10-16"),
         new("Update", "Update the SD card inside the MEGA65 (USB/JTAG or Ethernet)", FeatureStatus.Implemented, "USB/JTAG, Ethernet", "mega65_ftp dir/get/put", "Verified in-app over USB/JTAG on an R6 2026-10-16; Ethernet still to confirm"),
         new("Update", "Core flashing from the PC", FeatureStatus.NotOffered, "-", "MEGAFLASH on device (guided)", "Official tools refuse R4-R6; R2/R3 need Vivado"),
+        new("App", "Check for a new MEGA65 GUI version", FeatureStatus.Implemented, "Internet", "GitHub releases API (cached, conditional requests)", "At start-up, unless turned off on the About page; shows a link in the sidebar and never downloads by itself"),
+        new("App", "Report a problem with the app's details", FeatureStatus.Implemented, "Internet (browser)", "GitHub new-issue link with the details filled in", "Version, page, connection, COM ports, tools; no passwords, tokens or account names. Nothing is sent until you post it"),
         new("Tools", "Install official mega65-tools from the Filehost", FeatureStatus.Implemented, "Internet", "Filehost release/dev packages", "GPL-3.0 tools run as separate processes"),
 
         // Connectivity
         new("Connection", "USB/JTAG serial connection", FeatureStatus.Implemented, "USB/JTAG", "m65 -l COMx -s 2000000", "Verified on an R6 (TE0790 adapter, COM3) 2026-10-16. The MEGA65 must be running its core, not the ROM selection screen"),
         new("Connection", "Device state readout (model, core, ROM)", FeatureStatus.Implemented, "USB/JTAG", "Serial monitor: h, mffd3629, m20016", "Verified on an R6 running core 0.96 2026-10-16; real responses kept as a test"),
+        new("Connection", "Tell the MEGA65's USB/JTAG port from other COM ports", FeatureStatus.HardwareUnverified, "USB/JTAG", "Windows device IDs (WMI Win32_PnPEntity): FTDI FT2232H 0403:6010", "Port lists show e.g. \"COM5 – MEGA65 USB/JTAG\" and \"COM3 – Bluetooth (not a MEGA65)\" and only pick a port that could be the MEGA65. Not yet seen with a MEGA65 attached"),
         new("Connection", "Ethernet discovery and connection", FeatureStatus.HardwareUnverified, "Ethernet", "etherload -D", "Core 0.96+; SHIFT+£ on the MEGA65"),
 
         // Transfers

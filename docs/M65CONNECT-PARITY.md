@@ -45,9 +45,12 @@ The in-app **Features** page shows the same list from `src/Mega65Gui.Core/Featur
 | Update | Update My MEGA65 (12-step guided workflow) | – | – | Implemented |
 | Update | Update the SD card inside the MEGA65 (USB/JTAG or Ethernet) | Manual, via SD Card Manager | `mega65_ftp` get/put | Implemented (verified over USB/JTAG on an R6; Ethernet unverified) |
 | Update | Core flashing from the PC | – | `mega65_ftp flash`: R2/R3 + Vivado only; refuses R4–R6 and Ethernet | Not offered: guided MEGAFLASH |
+| App | Check for a new MEGA65 GUI version | – | – | Implemented |
+| App | Report a problem with the app's details | – | – | Implemented |
 | Tools | Install official mega65-tools from the Filehost | Bundles binaries | – | Implemented |
 | Connection | USB/JTAG serial connection | COM port, FTDI D2XX | `m65 -l COMx -s 2000000` (on Windows `-l` is required) | Implemented (verified on an R6) |
 | Connection | Device state readout (model, core, ROM) | Partial | Monitor `h`, `mffd3629 1`, `m20016` | Implemented (verified on an R6) |
+| Connection | Tell the MEGA65's USB/JTAG port from other COM ports | Connection Wizard (switch off and on to find the new FTDI port), List FTDI Devices | – | Hardware unverified (labels and picks by Windows device ID) |
 | Connection | Ethernet discovery and connection | `etherload -D` | `etherload -D`, `-i` | Hardware unverified |
 | Transfer | PRG send and run | Yes (J, E) | `m65 -F [-4] [-r] f.prg`, `etherload -i ip [-4/-5] [-r] f.prg` | Implemented (verified by the hardware self-test on an R6) |
 | Transfer | SID send | Yes (J) | `m65 -F -4 -r f.sid` | Implemented (verified on an R6) |

@@ -14,6 +14,7 @@ public partial class MainWindow : Window
             await vm.Selected.OnShownAsync();
             await vm.Shell.TryAutoSignInAsync();
             await vm.MyUploads.StartupCheckAsync();
+            await vm.Shell.CheckForNewVersionAtStartupAsync();
         };
     }
 }

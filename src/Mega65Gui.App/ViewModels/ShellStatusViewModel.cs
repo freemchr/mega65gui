@@ -19,6 +19,7 @@ public sealed partial class ShellStatusViewModel : ObservableObject
         services.Session.Changed += () => Application.Current.Dispatcher.Invoke(Refresh);
         services.ToolsChanged += () => Application.Current.Dispatcher.Invoke(Refresh);
         services.ConnectionChanged += () => { Refresh(); AnnounceConnection(); };
+        services.NewReleaseChanged += () => Application.Current.Dispatcher.Invoke(ShowNewRelease);
         Refresh();
         _toastTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
         _toastTimer.Tick += (_, _) => { _toastTimer.Stop(); ToastVisible = false; };
@@ -83,6 +84,29 @@ public sealed partial class ShellStatusViewModel : ObservableObject
         _toastTimer.Stop();
         ToastVisible = false;
     }
+
+    // ---- A newer MEGA65 GUI on GitHub: a row in the sidebar ----
+
+    [ObservableProperty] private string? _newVersionText;
+
+    private void ShowNewRelease() =>
+        NewVersionText = _services.NewRelease is { } r && AppReleaseCheck.ParseTag(r.Tag) is { } v
+            ? $"Version {AppReleaseCheck.Display(v)} is available" : null;
+
+    [RelayCommand]
+    private void OpenNewVersion()
+    {
+        if (_services.NewRelease?.Url is { } url) AboutViewModel.OpenUrl(url);
+    }
+
+    /// <summary>Checks GitHub for a newer version at start-up, unless turned off on the About page.</summary>
+    public Task CheckForNewVersionAtStartupAsync() =>
+        _services.Settings.CheckForNewVersions ? _services.CheckForNewVersionAsync() : Task.CompletedTask;
+
+    /// <summary>Set by the shell: opens the Report a problem window with the app's current details.</summary>
+    public Action? ReportProblem { get; set; }
+
+    [RelayCommand] private void OpenReportProblem() => ReportProblem?.Invoke();
 
     [ObservableProperty] private bool _isSignedIn;
     [ObservableProperty] private string _accountName = "Filehost";
